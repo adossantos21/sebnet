@@ -38,6 +38,7 @@ from .resnet_cifar import ResNet_CIFAR
 from .resnext import ResNeXt
 from .revvit import RevVisionTransformer
 from .riformer import RIFormer
+from .sebnet import SEBNet
 from .seresnet import SEResNet
 from .seresnext import SEResNeXt
 from .shufflenet_v1 import ShuffleNetV1
@@ -69,6 +70,7 @@ __all__ = [
     'ResNetV1d',
     'ResNeSt',
     'ResNet_CIFAR',
+    'SEBNet',
     'SEResNet',
     'SEResNeXt',
     'ShuffleNetV1',

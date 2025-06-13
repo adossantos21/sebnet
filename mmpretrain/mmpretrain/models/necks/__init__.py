@@ -12,11 +12,14 @@ from .milan_neck import MILANPretrainDecoder
 from .mixmim_neck import MixMIMPretrainDecoder
 from .mocov2_neck import MoCoV2Neck
 from .nonlinear_neck import NonLinearNeck
+from .ppm_neck import DAPPM, PAPPM
 from .simmim_neck import SimMIMLinearDecoder
 from .spark_neck import SparKLightDecoder
 from .swav_neck import SwAVNeck
 
 __all__ = [
+    'DAPPM',
+    'PAPPM',
     'GlobalAveragePooling',
     'GeneralizedMeanPooling',
     'HRFuseScales',

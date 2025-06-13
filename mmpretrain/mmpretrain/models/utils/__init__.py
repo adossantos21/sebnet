@@ -4,6 +4,7 @@ from .attention import (BEiTAttention, ChannelMultiheadAttention,
                         CrossMultiheadAttention, LeAttention,
                         MultiheadAttention, PromptMultiheadAttention,
                         ShiftWindowMSA, WindowMSA, WindowMSAV2)
+from .basic_block import BasicBlock, Bottleneck
 from .batch_augments import CutMix, Mixup, RandomBatchAugment, ResizeMix
 from .batch_shuffle import batch_shuffle_ddp, batch_unshuffle_ddp
 from .channel_shuffle import channel_shuffle
@@ -32,6 +33,8 @@ from .swiglu_ffn import SwiGLUFFN, SwiGLUFFNFused
 from .vector_quantizer import NormEMAVectorQuantizer
 
 __all__ = [
+    'BasicBlock',
+    'Bottleneck',
     'channel_shuffle',
     'make_divisible',
     'InvertedResidual',

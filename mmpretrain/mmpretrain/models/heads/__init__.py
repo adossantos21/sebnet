@@ -6,6 +6,7 @@ from .cls_head import ClsHead
 from .conformer_head import ConformerHead
 from .contrastive_head import ContrastiveHead
 from .deit_head import DeiTClsHead
+from .dino_head import DINOHead
 from .efficientformer_head import EfficientFormerClsHead
 from .grounding_head import GroundingHead
 from .itc_head import ITCHead
@@ -40,6 +41,7 @@ __all__ = [
     'MultiLabelLinearClsHead',
     'VisionTransformerClsHead',
     'DeiTClsHead',
+    'DINOHead',
     'ConformerHead',
     'EfficientFormerClsHead',
     'ArcFaceClsHead',
