@@ -9,6 +9,10 @@ from torch.nn.init import trunc_normal_
 from torch.nn.utils import weight_norm
 from .cls_head import ClsHead
 from mmpretrain.registry import MODELS
+from mmpretrain.structures import DataSample
+from typing import List, Optional, Tuple, Union
+
+import sys
 
 @MODELS.register_module()
 class DINOHead(ClsHead): # Changed from nn.Module to ClsHead, which inherits from BaseModule, which inherits from nn.Module
@@ -25,6 +29,7 @@ class DINOHead(ClsHead): # Changed from nn.Module to ClsHead, which inherits fro
     ):
         super().__init__()
         nlayers = max(nlayers, 1)
+        self.gap = nn.AdaptiveAvgPool2d((1,1))
         self.mlp = _build_mlp(nlayers, in_dim, bottleneck_dim, hidden_dim=hidden_dim, use_bn=use_bn, bias=mlp_bias)
         self.apply(self._init_weights)
         self.last_layer = weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
@@ -40,12 +45,29 @@ class DINOHead(ClsHead): # Changed from nn.Module to ClsHead, which inherits fro
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
+        # x is a tuple with two items. The first are the features with spatial dimensions. The second has the spatial dimensions collapsed.
+        # x[0] has shape (32, 1024, 4, 4)
+        x = x[0]
+        x = self.gap(x)
+        x = torch.flatten(x, 1) # shape (32, 1024)
+        #print(f"gap shape: {x.shape}")
         x = self.mlp(x)
+        #print(f"mlp shape: {x.shape}")
         eps = 1e-6 if x.dtype == torch.float16 else 1e-12
         x = nn.functional.normalize(x, dim=-1, p=2, eps=eps)
         # The final classification head
         x = self.last_layer(x)
+        #print(f"output shape: {x.shape}")
         return x
+
+    def loss(self, feats:torch.Tensor, data_samples: List[DataSample],
+             **kwargs) -> dict:
+        # self(feats) invokes __call__ method of nn.Linear(), which invokes the forward() method
+        # Thus, cls_score is equal to what is returned from the forward() method, i.e., x.
+        cls_score = self(feats) 
+        # The part can not be traced by torch.fx
+        losses = self._get_loss(cls_score, data_samples, **kwargs)
+        return losses
 
 def _build_mlp(nlayers, in_dim, bottleneck_dim, hidden_dim=None, use_bn=False, bias=True):
     if nlayers == 1:

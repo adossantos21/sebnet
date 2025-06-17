@@ -27,6 +27,7 @@ def find_folders(
         - folder_to_idx: The map from folder name to class idx.
     """
     # Pre-build file backend to prevent verbose file backend inference.
+
     backend = backend or get_file_backend(root, enable_singleton=True)
     folders = list(
         backend.list_dir_or_file(
@@ -35,6 +36,7 @@ def find_folders(
             list_file=False,
             recursive=False,
         ))
+    
     folders.sort()
     folder_to_idx = {folders[i]: i for i in range(len(folders))}
     return folders, folder_to_idx
@@ -227,7 +229,6 @@ class CustomDataset(BaseDataset):
                 folder_to_idx,
                 is_valid_file=self.is_valid_file,
             )
-
             self.folder_to_idx = folder_to_idx
 
             if self.CLASSES is not None:

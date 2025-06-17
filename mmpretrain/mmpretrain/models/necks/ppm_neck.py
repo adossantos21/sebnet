@@ -117,7 +117,9 @@ class DAPPM(BaseModule):
             act_cfg=act_cfg,
             **conv_cfg)
 
-    def forward(self, inputs: Tensor):
+    def forward(self, inputs: tuple):
+        # inputs is a tuple with two items. The first are the features with spatial dimensions. The second has the spatial dimensions collapsed.
+        inputs = inputs[0]
         feats = []
         feats.append(self.scales[0](inputs))
 
@@ -128,8 +130,9 @@ class DAPPM(BaseModule):
                 mode=self.unsample_mode)
             feats.append(self.processes[i - 1](feat_up + feats[i - 1]))
 
-        return self.compression(torch.cat(feats,
-                                          dim=1)) + self.shortcut(inputs)
+        output = tuple([self.compression(torch.cat(feats,
+                                          dim=1)) + self.shortcut(inputs)])
+        return output
 
 @MODELS.register_module()
 class PAPPM(DAPPM):
@@ -179,7 +182,9 @@ class PAPPM(DAPPM):
             act_cfg=self.act_cfg,
             **self.conv_cfg)
 
-    def forward(self, inputs: Tensor):
+    def forward(self, inputs: tuple):
+        # inputs is a tuple with two items. The first are the features with spatial dimensions. The second has the spatial dimensions collapsed.
+        inputs = inputs[0]
         x_ = self.scales[0](inputs)
         feats = []
         for i in range(1, self.num_scales):
@@ -190,5 +195,6 @@ class PAPPM(DAPPM):
                 align_corners=False)
             feats.append(feat_up + x_)
         scale_out = self.processes(torch.cat(feats, dim=1))
-        return self.compression(torch.cat([x_, scale_out],
-                                          dim=1)) + self.shortcut(inputs)
+        output = tuple([self.compression(torch.cat([x_, scale_out],
+                                          dim=1)) + self.shortcut(inputs)])
+        return output

@@ -17,15 +17,21 @@ train_dataloader = dict(
         data_root='data/imagenet',
         split='train',
         ann_file='meta/train.txt',
-        with_label=True,
-        data_prefix='train',
-        extensions=['.jpg', '.jpeg', '.JPEG', '.png', '.tif']),
+        with_label=True),
 )
 val_dataloader = dict(
     batch_size=64,                  # No back-propagation during validation, larger batch size can be used
-    dataset=dict(data_root='data/imagenet'),
+    dataset=dict(
+        data_root='data/imagenet',
+        split='val',
+        ann_file='meta/val.txt',
+        with_label=True),
 )
 test_dataloader = dict(
     batch_size=64,                  # No back-propagation during test, larger batch size can be used
-    dataset=dict(data_root='data/imagenet'),
+    dataset=dict(
+        data_root='data/imagenet',
+        split='test',
+        ann_file='meta/test.txt',
+        with_label=True),
 )

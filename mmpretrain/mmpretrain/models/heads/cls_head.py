@@ -89,7 +89,10 @@ class ClsHead(BaseModule):
             target = torch.stack([i.gt_score for i in data_samples])
         else:
             target = torch.cat([i.gt_label for i in data_samples])
-
+        #print(f"target shape: {target.shape}")
+        #print(f"target[0]: {target[0]}")
+        #import sys
+        #sys.exit()
         # compute loss
         losses = dict()
         loss = self.loss_module(

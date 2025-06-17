@@ -6,6 +6,7 @@ from .cross_correlation_loss import CrossCorrelationLoss
 from .cross_entropy_loss import (CrossEntropyLoss, binary_cross_entropy,
                                  cross_entropy)
 from .focal_loss import FocalLoss, sigmoid_focal_loss
+from .koleo_loss import KoLeoLoss
 from .label_smooth_loss import LabelSmoothLoss
 from .reconstruction_loss import PixelReconstructionLoss
 from .seesaw_loss import SeesawLoss
@@ -14,6 +15,7 @@ from .utils import (convert_to_one_hot, reduce_loss, weight_reduce_loss,
                     weighted_loss)
 
 __all__ = [
+    'KoLeoLoss',
     'asymmetric_loss',
     'AsymmetricLoss',
     'cross_entropy',
