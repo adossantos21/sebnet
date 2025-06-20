@@ -29,7 +29,7 @@ class DINOHead(ClsHead): # Changed from nn.Module to ClsHead, which inherits fro
     ):
         super().__init__()
         nlayers = max(nlayers, 1)
-        self.gap = nn.AdaptiveAvgPool2d((1,1))
+        #self.gap = nn.AdaptiveAvgPool2d((1,1))
         self.mlp = _build_mlp(nlayers, in_dim, bottleneck_dim, hidden_dim=hidden_dim, use_bn=use_bn, bias=mlp_bias)
         self.apply(self._init_weights)
         self.last_layer = weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
@@ -47,9 +47,9 @@ class DINOHead(ClsHead): # Changed from nn.Module to ClsHead, which inherits fro
     def forward(self, x):
         # x is a tuple with two items. The first are the features with spatial dimensions. The second has the spatial dimensions collapsed.
         # x[0] has shape (32, 1024, 4, 4)
-        x = x[0]
-        x = self.gap(x)
-        x = torch.flatten(x, 1) # shape (32, 1024)
+        #x = x[0]
+        #x = self.gap(x)
+        #x = torch.flatten(x, 1) # shape (32, 1024)
         #print(f"gap shape: {x.shape}")
         x = self.mlp(x)
         #print(f"mlp shape: {x.shape}")

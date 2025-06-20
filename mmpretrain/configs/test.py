@@ -1,11 +1,31 @@
-# Pre-training with KoLeo Regularization
-
-_base_ = [
-    '../../_base_/models/sebnet_neck.py',
-    '../../_base_/datasets/imagenet_bs32.py',
-    '../../_base_/schedules/imagenet_bs256.py',
-    '../../_base_/default_runtime.py'
+_base_ = [                                    # This config file will inherit all config files in `_base_`.
+    '_base_/models/resnet50.py',           # model settings
+    '_base_/datasets/imagenet_bs32.py',    # data settings
+    '_base_/schedules/imagenet_bs256.py',  # schedule settings
+    '_base_/default_runtime.py'            # runtime settings
 ]
+
+#work_dir = 'z_test_work_dir'
+model = dict(
+    type='ImageClassifier',     # The type of the main model (here is for image classification task).
+    backbone=dict(
+        type='ResNet',          # The type of the backbone module.
+        # All fields except `type` come from the __init__ method of class `ResNet`
+        # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.backbones.ResNet.html
+        depth=50,
+        num_stages=4,
+        out_indices=(3, ),
+        frozen_stages=-1,
+        style='pytorch'),
+    neck=dict(type='GlobalAveragePooling'),    # The type of the neck module.
+    head=dict(
+        type='LinearClsHead',     # The type of the classification head module.
+        # All fields except `type` come from the __init__ method of class `LinearClsHead`
+        # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
+        num_classes=1000,
+        in_channels=2048,
+        loss=dict(type='CrossEntropyLoss', loss_weight=1.0),
+    ))
 
 dataset_type = 'ImageNet'
 # preprocessing configuration
@@ -30,38 +50,43 @@ test_pipeline = [
     dict(type='PackInputs'),                 # prepare images and labels
 ]
 
-# Use your own dataset directory
+# Construct training set dataloader
 train_dataloader = dict(
-    dataset=dict(
+    batch_size=32,                     # batchsize per GPU
+    num_workers=5,                     # Number of workers to fetch data per GPU
+    dataset=dict(                      # training dataset
+        type=dataset_type,
         data_root='data/imagenet',
         ann_file='meta/train.txt',
         data_prefix='train',
-        pipeline=train_pipeline,
-        with_label=True),
+        pipeline=train_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=True),   # default sampler
+    persistent_workers=True,                             # Whether to keep the process, can shorten the preparation time of each epoch
 )
+
+# Construct the validation set dataloader
 val_dataloader = dict(
-    batch_size=64,                  # No back-propagation during validation, larger batch size can be used
+    batch_size=32,
+    num_workers=5,
     dataset=dict(
+        type=dataset_type,
         data_root='data/imagenet',
-        split='val',
         ann_file='meta/val.txt',
-        with_label=True),
-)
-test_dataloader = dict(
-    batch_size=64,                  # No back-propagation during test, larger batch size can be used
-    dataset=dict(
-        data_root='data/imagenet',
-        split='test',
-        ann_file='meta/test.txt',
-        with_label=True),
+        data_prefix='val',
+        pipeline=test_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    persistent_workers=True,
 )
 
 # The settings of the evaluation metrics for validation. We use the top1 and top5 accuracy here.
 val_evaluator = dict(type='Accuracy', topk=(1, 5))
-test_evaluator = val_evaluator    # The settings of the evaluation metrics for test, which is the same
+
+test_dataloader = val_dataloader  # The settings of the dataloader for the test dataset, which is the same as val_dataloader
+test_evaluator = val_evaluator    # The settings of the evaluation metrics for test, which is the same as val_evaluator
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
+    type='SuperCustomOptimWrapper',
     optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
 
 # The tuning strategy of the learning rate.
@@ -105,6 +130,10 @@ default_hooks = dict(
     # validation results visualization, set True to enable it.
     visualization=dict(type='VisualizationHook', enable=False),
 )
+
+custom_hooks = [
+    dict(type='GradFlowVisualizationHook', interval=100, show_plot=False, priority='NORMAL')
+]
 
 # configure environment
 env_cfg = dict(

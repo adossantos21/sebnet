@@ -9,6 +9,7 @@ model = dict(
         num_stem_blocks = 2,
         num_branch_blocks = 3,
         align_corners = False),
+    neck=dict(type='GlobalAveragePooling'),    # The type of the neck module.
     head=dict(
         type='DINOHead',     # The type of the classification head module.
         # All fields except `type` come from the __init__ method of class `LinearClsHead`

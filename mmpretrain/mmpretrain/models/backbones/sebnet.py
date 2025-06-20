@@ -44,7 +44,6 @@ class SEBNet(BaseBackbone):
     """
 
     def __init__(self,
-                 koleo: bool = False,
                  in_channels: int = 3,
                  channels: int = 64,
                  ppm_channels: int = 96,
@@ -56,15 +55,9 @@ class SEBNet(BaseBackbone):
                  init_cfg: OptConfigType = None,
                  **kwargs):
         super(SEBNet, self).__init__(init_cfg)
-        self.koleo = koleo
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
-
-        # GAP for KoLeo loss
-        if self.koleo:
-            self.gap = nn.AdaptiveAvgPool2d((1,1))
-            self.loss_module = dict(type='KoLeoLoss', loss_weight=1.0)
 
         # stem layer - we need better granularity to integrate the SBD modules
         self.conv1 =  nn.Sequential(
@@ -270,14 +263,7 @@ class SEBNet(BaseBackbone):
         # stage 5
         x_5 = self.i_branch_layers[2](x_4) # (N, C=1024, H/64, W/64)
 
-        # Collapse spatial dimensions for KoLeo regularization
-        if self.koleo:
-            out = self.gap(x_5)
-            out = torch.flatten(x, 1) # shape (N, 1024)
-            feats = (x_5, out)
-        else:
-            feats = tuple([x_5])
-        return feats
+        return x_5
     
     def loss(self, feats: Tuple[torch.Tensor], data_samples: List[DataSample],
              **kwargs) -> dict:
