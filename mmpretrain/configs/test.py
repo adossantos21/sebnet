@@ -1,7 +1,6 @@
 _base_ = [                                    # This config file will inherit all config files in `_base_`.
     '_base_/models/resnet50.py',           # model settings
     '_base_/datasets/imagenet_bs32.py',    # data settings
-    '_base_/schedules/imagenet_bs256.py',  # schedule settings
     '_base_/default_runtime.py'            # runtime settings
 ]
 
@@ -86,7 +85,7 @@ test_evaluator = val_evaluator    # The settings of the evaluation metrics for t
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
-    type='SuperCustomOptimWrapper',
+    type='GradTrackingOptimWrapper',
     optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
 
 # The tuning strategy of the learning rate.
@@ -96,7 +95,8 @@ param_scheduler = dict(
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(by_epoch=True, max_epochs=100, val_interval=1)
+train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
+#train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=100, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict()
 # Use the default test loop settings.
@@ -132,7 +132,7 @@ default_hooks = dict(
 )
 
 custom_hooks = [
-    dict(type='GradFlowVisualizationHook', interval=100, show_plot=False, priority='NORMAL')
+    dict(type='GradFlowVisualizationHook', interval=10000, initial_grads=True, show_plot=False, priority='NORMAL')
 ]
 
 # configure environment

@@ -2,11 +2,11 @@ from .image import ImageClassifier
 from mmpretrain.registry import MODELS
 from typing import Union, Dict
 import torch
-from mmengine.optim.optimizers import OptimWrapper
+from mmengine.optim.optimizer import OptimWrapper
 
 @MODELS.register_module()
 class ImageClassifierWithGrads(ImageClassifier):
-    def train_step(self, runner, data: Union[dict, tuple, list],
+    def train_step(self, data: Union[dict, tuple, list],
                    optim_wrapper: OptimWrapper) -> Dict[str, torch.Tensor]:
         """Implements the default model training process including
         preprocessing, model forward propagation, loss calculation,
@@ -46,4 +46,4 @@ class ImageClassifierWithGrads(ImageClassifier):
             losses = self._run_forward(data, mode='loss')  # type: ignore
         parsed_losses, log_vars = self.parse_losses(losses)  # type: ignore
         optim_wrapper.update_params(parsed_losses)
-        return log_vars
+        return log_vars, parsed_losses
