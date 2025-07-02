@@ -4,7 +4,7 @@ from .attention import (BEiTAttention, ChannelMultiheadAttention,
                         CrossMultiheadAttention, LeAttention,
                         MultiheadAttention, PromptMultiheadAttention,
                         ShiftWindowMSA, WindowMSA, WindowMSAV2)
-from .basic_block import BasicBlock, Bottleneck
+from .basic_block import BasicBlock, Bottleneck, AdaptiveBottleneck, BottleneckExp2
 from .batch_augments import CutMix, Mixup, RandomBatchAugment, ResizeMix
 from .batch_shuffle import batch_shuffle_ddp, batch_unshuffle_ddp
 from .channel_shuffle import channel_shuffle
@@ -24,6 +24,7 @@ from .norm import GRN, LayerNorm2d, build_norm_layer
 from .position_encoding import (ConditionalPositionEncoding,
                                 PositionEncodingFourier, RotaryEmbeddingFast,
                                 build_2d_sincos_position_embedding)
+from .ppm import DAPPM, PAPPM
 from .res_layer_extra_norm import ResLayerExtraNorm
 from .se_layer import SELayer
 from .sparse_modules import (SparseAvgPooling, SparseBatchNorm2d, SparseConv2d,
@@ -33,9 +34,13 @@ from .swiglu_ffn import SwiGLUFFN, SwiGLUFFNFused
 from .vector_quantizer import NormEMAVectorQuantizer
 
 __all__ = [
+    'AdaptiveBottleneck',
     'BasicBlock',
     'Bottleneck',
+    'BottleneckExp2',
     'channel_shuffle',
+    'DAPPM',
+    'PAPPM',
     'make_divisible',
     'InvertedResidual',
     'SELayer',

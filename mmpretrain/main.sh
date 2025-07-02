@@ -1,2 +1,2 @@
-export CUDA_VISIBLE_DEVICES=2
-python tools/train.py configs/test.py
+export CUDA_VISIBLE_DEVICES=1
+python tools/train.py configs/pidnet/pidnet-imagenet.py

@@ -11,10 +11,12 @@ from .switch_recipe_hook import SwitchRecipeHook
 from .visualization_hook import VisualizationHook
 from .warmup_param_hook import WarmupParamHook
 from .gradient_visualization_hook import GradFlowVisualizationHook
+from .custom_checkpoint_hook import CustomCheckpointHook
 
 __all__ = [
     'ClassNumCheckHook', 'PreciseBNHook', 'VisualizationHook',
     'SwitchRecipeHook', 'PrepareProtoBeforeValLoopHook',
     'SetAdaptiveMarginsHook', 'EMAHook', 'SimSiamHook', 'DenseCLHook',
-    'SwAVHook', 'WarmupParamHook', 'GradFlowVisualizationHook'
+    'SwAVHook', 'WarmupParamHook', 'GradFlowVisualizationHook',
+    'CustomCheckpointHook'
 ]

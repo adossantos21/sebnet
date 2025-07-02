@@ -1,9 +1,8 @@
-# Pre-training with KoLeo Regularization
+# Pre-training without KoLeo Regularization
 
 _base_ = [
-    '../../_base_/models/sebnet_base.py',
+    '../../_base_/models/sebnet_alt.py',
     '../../_base_/datasets/imagenet_bs32.py',
-    '../../_base_/schedules/imagenet_bs256.py',
     '../../_base_/default_runtime.py'
 ]
 
@@ -32,29 +31,29 @@ test_pipeline = [
 
 # Use your own dataset directory
 train_dataloader = dict(
+    batch_size=32,
+    num_workers=5,
     dataset=dict(
         data_root='data/imagenet',
         ann_file='meta/train.txt',
         data_prefix='train',
-        pipeline=train_pipeline,
-        with_label=True),
+        pipeline=train_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=True),
+    persistent_workers=True,
 )
 val_dataloader = dict(
-    batch_size=64,                  # No back-propagation during validation, larger batch size can be used
+    batch_size=32,               
+    num_workers=5,
     dataset=dict(
+        type=dataset_type,
         data_root='data/imagenet',
-        split='val',
         ann_file='meta/val.txt',
-        with_label=True),
+        data_prefix='val',
+        pipeline=test_pipeline),
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    persistent_workers=True,
 )
-test_dataloader = dict(
-    batch_size=64,                  # No back-propagation during test, larger batch size can be used
-    dataset=dict(
-        data_root='data/imagenet',
-        split='test',
-        ann_file='meta/test.txt',
-        with_label=True),
-)
+test_dataloader = val_dataloader
 
 # The settings of the evaluation metrics for validation. We use the top1 and top5 accuracy here.
 val_evaluator = dict(type='Accuracy', topk=(1, 5))
@@ -62,6 +61,7 @@ test_evaluator = val_evaluator    # The settings of the evaluation metrics for t
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
+    type='GradTrackingOptimWrapper',
     optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
 
 # The tuning strategy of the learning rate.
@@ -71,7 +71,7 @@ param_scheduler = dict(
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(by_epoch=True, max_epochs=100, val_interval=1)
+train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict()
 # Use the default test loop settings.
@@ -97,7 +97,7 @@ default_hooks = dict(
     param_scheduler=dict(type='ParamSchedulerHook'),
 
     # save checkpoint per epoch.
-    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=74),
+    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=99),
 
     # set sampler seed in a distributed environment.
     sampler_seed=dict(type='DistSamplerSeedHook'),
@@ -105,6 +105,11 @@ default_hooks = dict(
     # validation results visualization, set True to enable it.
     visualization=dict(type='VisualizationHook', enable=False),
 )
+
+custom_hooks = [
+    dict(type='GradFlowVisualizationHook', interval=20000, initial_grads=True, show_plot=False, priority='HIGHEST'),
+    dict(type='CustomCheckpointHook', interval=1, save_begin=74, priority='VERY_LOW')
+]
 
 # configure environment
 env_cfg = dict(

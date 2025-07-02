@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 import matplotlib.pyplot as plt
 import numpy as np
 from mmengine.hooks import Hook
@@ -20,7 +21,6 @@ class GradFlowVisualizationHook(Hook):
         show_plot (bool): Whether to display plots. Default: False.
         priority (int or str): Priority of the hook. Default: 'NORMAL'.
     """
-        
     def __init__(self, 
                  interval=100, 
                  initial_grads=True,
@@ -82,17 +82,21 @@ class GradFlowVisualizationHook(Hook):
         """
         if self.every_n_train_iters(runner, self.interval):
             # Determine save directory
+            gradients = "gradients"
             if self.out_dir is None:
-                save_dir = runner.work_dir
+                save_dir = osp.join(runner._log_dir, gradients)
             else:
+                basename = osp.basename(runner.work_dir.rstrip(osp.sep))
+                date = osp.basename(runner._log_dir.rstrip(osp.sep))
+                self.out_dir = osp.join(self.out_dir, basename, date, gradients)
                 save_dir = self.out_dir
                 
             os.makedirs(save_dir, exist_ok=True)
             
             # Create save path with iteration number
-            save_path = os.path.join(
+            save_path = osp.join(
                 save_dir, 
-                f'gradient_flow_iter_{runner.iter + 1}.png'
+                f'gradient_flow_epoch_{runner.epoch}_iter_{runner.iter + 1}.png'
             )
             
 
@@ -103,23 +107,26 @@ class GradFlowVisualizationHook(Hook):
             )
             
             runner.logger.info(
-                f'Gradient flow plot saved to {save_path} at iteration {runner.iter + 1}'
+                f'Gradient flow plot saved to {save_path} for epoch {runner.epoch} at iteration {runner.iter + 1}'
             )
 
         if self.initial_grads==True and runner.iter==100:
             # Determine save directory
-            print(f"runner.iter: {runner.iter}")
+            gradients = "gradients"
             if self.out_dir is None:
-                save_dir = runner.work_dir
+                save_dir = osp.join(runner._log_dir, gradients)
             else:
+                basename = osp.basename(runner.work_dir.rstrip(osp.sep))
+                date = osp.basename(runner._log_dir.rstrip(osp.sep))
+                self.out_dir = osp.join(self.out_dir, basename, date, gradients)
                 save_dir = self.out_dir
                 
             os.makedirs(save_dir, exist_ok=True)
             
             # Create save path with iteration number
-            save_path = os.path.join(
+            save_path = osp.join(
                 save_dir, 
-                f'gradient_flow_iter_{runner.iter}.png'
+                f'gradient_flow_epoch_{runner.epoch}_iter_{runner.iter}.png'
             )
             
 
@@ -130,5 +137,6 @@ class GradFlowVisualizationHook(Hook):
             )
             
             runner.logger.info(
-                f'Gradient flow plot saved to {save_path} at iteration {runner.iter}'
+                f'Gradient flow plot saved to {save_path} for epoch {runner.epoch} at iteration {runner.iter}'
             )
+    

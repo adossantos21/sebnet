@@ -1,19 +1,45 @@
-# Pre-training without KoLeo Regularization
-
 _base_ = [
-    '../../_base_/models/sebnet_neck.py',
-    '../../_base_/datasets/imagenet_bs32.py',
-    '../../_base_/default_runtime.py'
+    '../_base_/datasets/imagenet_bs32.py',
+    '../_base_/default_runtime.py'
+]
+
+
+# The class_weight is borrowed from https://github.com/openseg-group/OCNet.pytorch/issues/14 # noqa
+# Licensed under the MIT License
+class_weight = [
+    0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
+    1.0023, 0.9539, 0.9843, 1.1116, 0.9037, 1.0865, 1.0955, 1.0865, 1.1529,
+    1.0507
 ]
 
 dataset_type = 'ImageNet'
-# preprocessing configuration
 data_preprocessor = dict(
     # Input image data channels in 'RGB' order
     mean=[123.675, 116.28, 103.53],    # Input image normalized channel mean in RGB order
     std=[58.395, 57.12, 57.375],       # Input image normalized channel std in RGB order
     to_rgb=True,                       # Whether to flip the channel from BGR to RGB or RGB to BGR
 )
+
+norm_cfg = dict(type='SyncBN', requires_grad=True)
+model = dict(
+    type='ImageClassifier',
+    data_preprocessor=data_preprocessor,
+    backbone=dict(
+        type='PIDNet',
+        channels=64,
+        ppm_channels=112,
+        num_stem_blocks=3,
+        num_branch_blocks=4
+    ),
+    neck=dict(type='GlobalAveragePooling'),    # The type of the neck module.
+    head=dict(
+        type='SEBNetLinearHead',     # The type of the classification head module.
+        # All fields except `type` come from the __init__ method of class `LinearClsHead`
+        # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
+        num_classes=1000,
+        in_channels=1024,
+        loss=dict(type='CrossEntropyLoss', loss_weight=1.0),
+    ))
 
 train_pipeline = [
     dict(type='LoadImageFromFile'),     # read image
@@ -136,3 +162,4 @@ load_from = None
 
 # whether to resume training from the loaded checkpoint
 resume = False
+

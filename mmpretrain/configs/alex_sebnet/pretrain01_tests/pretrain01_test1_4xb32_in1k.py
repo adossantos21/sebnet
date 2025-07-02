@@ -1,7 +1,7 @@
-# Pre-training without KoLeo Regularization
+# Pre-training with KoLeo Regularization
 
 _base_ = [
-    '../../_base_/models/sebnet_neck.py',
+    '../../_base_/models/sebnet_test1.py',
     '../../_base_/datasets/imagenet_bs32.py',
     '../../_base_/default_runtime.py'
 ]

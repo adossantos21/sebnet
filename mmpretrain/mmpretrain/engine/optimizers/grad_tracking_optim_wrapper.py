@@ -35,18 +35,3 @@ class GradTrackingOptimWrapper(OptimWrapper):
             zero_kwargs = {}
         loss = self.scale_loss(loss)
         self.backward(loss)
-
-    '''
-    def backward(self, loss, **kwargs):
-        """
-        Override backward to call hook after gradient computation, so that we can 
-        visualize gradients.
-        """
-        super().backward(loss, **kwargs)
-
-        # Call custom hook after backward pass
-        if self.runner is not None:
-            self.runner.call_hook('after_backward_pass')
-        else:
-            raise RuntimeError(f"self.runner is None")
-    '''

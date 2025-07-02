@@ -94,9 +94,7 @@ param_scheduler = dict(
     type='MultiStepLR', by_epoch=True, milestones=[30, 60, 90], gamma=0.1)
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
-# 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
 train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
-#train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=100, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict()
 # Use the default test loop settings.
@@ -122,7 +120,7 @@ default_hooks = dict(
     param_scheduler=dict(type='ParamSchedulerHook'),
 
     # save checkpoint per epoch.
-    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=74),
+    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=99),
 
     # set sampler seed in a distributed environment.
     sampler_seed=dict(type='DistSamplerSeedHook'),
@@ -132,7 +130,8 @@ default_hooks = dict(
 )
 
 custom_hooks = [
-    dict(type='GradFlowVisualizationHook', interval=10000, initial_grads=True, show_plot=False, priority='NORMAL')
+    dict(type='GradFlowVisualizationHook', interval=20000, initial_grads=True, show_plot=False, priority='HIGHEST'),
+    dict(type='CustomCheckpointHook', interval=1, save_begin=74, priority='VERY_LOW')
 ]
 
 # configure environment
