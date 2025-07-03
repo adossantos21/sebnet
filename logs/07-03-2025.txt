@@ -1,0 +1,12 @@
+mmengine/model/base_model/base_model.py
+mmengine/model/base_model/data_preprocessor.py
+mmengine/dataset/base_dataset.py
+mmseg/datasets/basesegdataset.py
+
+base_model.py is responsible for retrieving the data you need to train your models, calling the data in the loss function, parsing the losses, and updating the parameters of the models using the losses. This all takes place in base_model.py's train_step() method. All models (MMPretrain, MMSegmentation, etc.) inherit from BaseModel object in base_model.py. Thus, you can override the train_step() method in any of the SEBNet models you create in `mmseg/models/backbones/`. The line `data = self.data_preprocessor(data, True)` extracts your training data. self.data_preprocessor comes from data_preprocessor.py.
+
+data_preprocessor.py is what you need to look at first, for when you want to start loading in the correct edge ground truth data. 
+
+You'll also need to build your OTFGT Dataset from mmengine's BaseDataset object. You could optionally inherit from any mmseg/datasets/basesegdataset.py, since it inherits from the mmengine BaseDataset object. See boundary_boost_mmseg/bbseg/datasets/custom.py for the original OTFGT Dataset.
+
+For now though, you should really get the config files set up before figuring out the dataset stuff.

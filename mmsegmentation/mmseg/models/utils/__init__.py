@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .basic_block import BasicBlock, Bottleneck
+from .basic_block import BasicBlock, Bottleneck, BottleneckExp2
 from .embed import PatchEmbed
 from .encoding import Encoding
 from .inverted_residual import InvertedResidual, InvertedResidualV3
@@ -16,12 +16,27 @@ from .up_conv_block import UpConvBlock
 # isort: off
 from .wrappers import Upsample, resize
 from .san_layers import MLP, LayerNorm2d, cross_attn_layer
+from .fusion_modules import (
+    PagFM,
+    Bag,
+    LightBag,
+    PIFusion
+)
+
+from .aux_modules import (
+    PModule,
+    DModule,
+    CASENet,
+    DFF,
+    BEM,
+)
 
 __all__ = [
     'ResLayer', 'SelfAttentionBlock', 'make_divisible', 'InvertedResidual',
     'UpConvBlock', 'InvertedResidualV3', 'SELayer', 'PatchEmbed',
     'nchw_to_nlc', 'nlc_to_nchw', 'nchw2nlc2nchw', 'nlc2nchw2nlc', 'Encoding',
     'Upsample', 'resize', 'DAPPM', 'PAPPM', 'BasicBlock', 'Bottleneck',
-    'cross_attn_layer', 'LayerNorm2d', 'MLP',
-    'get_uncertain_point_coords_with_randomness'
+    'cross_attn_layer', 'LayerNorm2d', 'MLP', 'BottleneckExp2',
+    'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
+    "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM",
 ]
