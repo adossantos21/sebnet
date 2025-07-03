@@ -1,4 +1,4 @@
 python tools/analysis_tools/benchmark.py \
-    configs/pidnet/pidnet-imagenet.py \
-    work_dirs/pidnet_L_imagenet_ckpt/backbone_pidnet-l_imagenet1k_20230306-67889109.pth \
+    configs/alex_sebnet/pretrain01_tests/pretrain01_test3_4xb32_in1k.py \
+    work_dirs/pretrain01_4xb32_in1k/20250630_162242/checkpoints/pretrain01_4xb32_in1k/20250630_162242/epoch_100.pth \
     --repeat 200

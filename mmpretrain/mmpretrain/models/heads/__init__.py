@@ -16,6 +16,7 @@ from .itpn_clip_head import iTPNClipHead
 from .latent_heads import LatentCrossCorrelationHead, LatentPredictHead
 from .levit_head import LeViTClsHead
 from .linear_head import LinearClsHead
+from .linear_koleo_head import LinearKoLeoHead
 from .mae_head import MAEPretrainHead
 from .margin_head import ArcFaceClsHead
 from .mim_head import MIMHead
@@ -38,6 +39,7 @@ from .vqa_head import VQAGenerationHead
 __all__ = [
     'ClsHead',
     'LinearClsHead',
+    'LinearKoLeoHead',
     'StackedLinearClsHead',
     'MultiLabelClsHead',
     'MultiLabelLinearClsHead',
