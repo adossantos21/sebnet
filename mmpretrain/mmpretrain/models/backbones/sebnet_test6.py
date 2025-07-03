@@ -1,4 +1,4 @@
-# SEBNet with two returns, deeply supervising the output of the first bottleneck block
+# SEBNet but with dense connections in the final bottleneck blocks
 
 from typing import List, Optional, Tuple, Union
 
@@ -18,7 +18,7 @@ from mmpretrain.models.utils.basic_block import OptConfigType
 
 
 @MODELS.register_module()
-class SEBNetTest5(BaseBackbone):
+class SEBNetTest6(BaseBackbone):
     """SEBNet backbone.
 
     This backbone is the implementation of `SEBNet: Real-Time Semantic
@@ -55,7 +55,7 @@ class SEBNetTest5(BaseBackbone):
                  act_cfg: dict = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):
-        super(SEBNetTest5, self).__init__(init_cfg)
+        super(SEBNetTest6, self).__init__(init_cfg)
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
@@ -94,14 +94,29 @@ class SEBNetTest5(BaseBackbone):
 
         # I Branch
         self.i_branch_layers = nn.ModuleList()
-        for i in range(3):
+        for i in range(2):
             self.i_branch_layers.append(
                 self._make_layer(
-                    block=BasicBlock if i < 2 else Bottleneck,
+                    block=BasicBlock,
                     in_channels=channels * 2**(i + 1),
                     channels=channels * 8 if i > 0 else channels * 4,
-                    num_blocks=num_branch_blocks if i < 2 else 2,
+                    num_blocks=num_branch_blocks,
                     stride=2))
+        
+        self.i_branch_layers.append(
+            nn.Sequential(
+                self._make_layer(Bottleneck, channels * 8, channels * 4, 1, stride=1),
+                self._make_layer(Bottleneck, channels * 32, channels * 8, 1, stride=1)
+            )
+        )
+            
+        self.dense_expansion = self._make_layer(
+                                block=BasicBlock,
+                                in_channels=channels * 30,
+                                channels=channels * 32, # do 16 if the throughput is too large
+                                num_blocks=1,
+                                stride=2
+        )
         
     def _make_stem_layer(self, in_channels: int, channels: int,
                          num_blocks: int) -> nn.Sequential:
@@ -262,8 +277,20 @@ class SEBNetTest5(BaseBackbone):
         x_4 = self.relu(self.i_branch_layers[1](x_3)) # (N, C=512, H/32, W/32)
 
         # stage 5
-        x_5_0 = self.i_branch_layers[2][0](x_4) # (N, C=2048, H/64, W/64)
-        x_5_1 = self.i_branch_layers[2][1](x_5_0) # (N, C=2048, H/64, W/64)
+        x_5 = self.i_branch_layers[2][0](x_4) # (N, C=1024, H/64, W/64)
+        size = x_5.shape[2:]
 
-        return (x_5_0, x_5_1) if self.training else x_5_1
+        # stage 6 - dense expansion
+        x_concat = torch.cat([
+                    F.interpolate(x_2, size=size, mode='bilinear', align_corners=False),
+                    F.interpolate(x_3, size=size, mode='bilinear', align_corners=False),
+                    F.interpolate(x_4, size=size, mode='bilinear', align_corners=False),
+                    x_5], dim=1) # (N, C=1920, H/64, W/64)
+        
+        x_6 = self.dense_expansion(x_concat) # (N, C=2048, H/64, W/64)
 
+        # stage 7
+        x_7 = self.i_branch_layers[2][1](x_6) # (N, C=2048, H/64, W/64)
+
+        return (x_5, x_7) if self.training else x_7
+    

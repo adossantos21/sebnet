@@ -8,6 +8,7 @@ from .contrastive_head import ContrastiveHead
 from .deit_head import DeiTClsHead
 from .dino_head import DINOHead
 from .efficientformer_head import EfficientFormerClsHead
+from .fcn_head import FCNHead
 from .grounding_head import GroundingHead
 from .itc_head import ITCHead
 from .itm_head import ITMHead
@@ -45,6 +46,7 @@ __all__ = [
     'DINOHead',
     'ConformerHead',
     'EfficientFormerClsHead',
+    'FCNHead',
     'ArcFaceClsHead',
     'CSRAClsHead',
     'MultiTaskHead',
