@@ -1,3 +1,6 @@
+mmpretrain/z_test_work_dir/*
+*.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

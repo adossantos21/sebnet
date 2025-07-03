@@ -6,5 +6,5 @@ from .timm import TimmClassifier
 
 __all__ = [
     'BaseClassifier', 'ImageClassifier', 'TimmClassifier',
-    'HuggingFaceClassifier'
+    'HuggingFaceClassifier',
 ]

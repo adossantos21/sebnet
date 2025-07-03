@@ -1,0 +1,13 @@
+Context:
+Been trying to plot gradients during model training to see if your custom trainings are going well. To ensure the gradients are being plotted correctly, you're testing this approach on a ResNet50 model, since you've already trained one that learns the task well. This has proven to be quite the task. First, you tried integrating your gradient plotting logic into a hook that is called after training iterations; however, the gradients are zeroed out in the training loop logic, which is handled implicitly, so you can't use a hook to retrieve the gradients. This has forced you to need to do two things: Subclass IterBasedTrainingLoop or EpochBasedTrainingLoop, since they both call runner.model.train_step(), and subclass ImageClassifier (mmpretrain/models/classifiers/image_with_grads.py) because ImageClassifier inherits from BaseClassifier, which inherits from BaseModel, which is the object that wraps your backbone, neck, and head before passing it to the runner object, where the runner object calls runner.model.train_step() in the aforementioned training loops. train_step() in BaseModel is what updates the model parameters and zeros out the gradients. Thus, we are overriding train_step() in image_with_grads.py so we can make a call to your gradient plotting hook prior to the gradients being zeroed. 
+
+Current TODO:
+1. Subclass one of the training loops and add runner as an argument in your runner.model.train_step() call. This will be really simple.
+2. Subclass ImageClassifier in image_with_grads.py and override the train_step() call to account for accepting runner as an argument, so you can add the line `runner.call_hook('after_backward_pass')`.
+
+Downstream TODO:
+1. Ensure gradient plotting works as intended.
+2. Find a way to measure latency/throughput (see PIDNet approach) in MMPretrain to make sure the model is still operating in real-time.
+3. Adjust SEBNet model depth, model width, hyperparameters, and monitor gradients and loss during training to make sure it learns well.
+4. Train all the pretrain ablations.
+5. Start working on downstream configurations.

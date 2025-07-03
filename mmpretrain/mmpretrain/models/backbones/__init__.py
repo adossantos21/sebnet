@@ -26,6 +26,7 @@ from .mobilenet_v3 import MobileNetV3
 from .mobileone import MobileOne
 from .mobilevit import MobileViT
 from .mvit import MViT
+from .pidnet import PIDNet
 from .poolformer import PoolFormer
 from .regnet import RegNet
 from .replknet import RepLKNet
@@ -38,6 +39,13 @@ from .resnet_cifar import ResNet_CIFAR
 from .resnext import ResNeXt
 from .revvit import RevVisionTransformer
 from .riformer import RIFormer
+from .sebnet import SEBNet
+from .sebnet_test1 import SEBNetTest1
+from .sebnet_test2 import SEBNetTest2
+from .sebnet_test3 import SEBNetTest3
+from .sebnet_test4 import SEBNetTest4
+from .sebnet_test5 import SEBNetTest5
+from .sebnet_test6 import SEBNetTest6
 from .seresnet import SEResNet
 from .seresnext import SEResNeXt
 from .shufflenet_v1 import ShuffleNetV1
@@ -69,6 +77,13 @@ __all__ = [
     'ResNetV1d',
     'ResNeSt',
     'ResNet_CIFAR',
+    'SEBNet',
+    'SEBNetTest1',
+    'SEBNetTest2',
+    'SEBNetTest3',
+    'SEBNetTest4',
+    'SEBNetTest5',
+    'SEBNetTest6',
     'SEResNet',
     'SEResNeXt',
     'ShuffleNetV1',
@@ -100,6 +115,7 @@ __all__ = [
     'CSPNet',
     'RepLKNet',
     'RepMLPNet',
+    'PIDNet',
     'PoolFormer',
     'RIFormer',
     'DenseNet',
