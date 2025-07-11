@@ -373,7 +373,7 @@ def cross_attn_layer(tf_layer: BaseTransformerLayer, x, mem, attn_bias):
     return x
 
 
-class LayerNorm2d(nn.Module):
+class LayerNorm2dSAN(nn.Module):
     """A LayerNorm variant, popularized by Transformers, that performs point-
     wise mean and variance normalization over the channel dimension for inputs
     that have shape (batch_size, channels, height, width).

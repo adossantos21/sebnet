@@ -70,7 +70,7 @@ iters = 120000
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
-    type='GradTrackingOptimWrapper',
+    type='mmpretrain.GradTrackingOptimWrapper',
     optimizer=dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005))
 
 # The tuning strategy of the learning rate.
@@ -84,15 +84,18 @@ param_scheduler = [
         end=iters,
         by_epoch=True)
 ]
+val_dataloader = dict(batch_size=1)
+test_dataloader = val_dataloader
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
 train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=484, val_interval=1)
+train_cfg = dict(by_epoch=True, max_epochs=300, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict(type='ValLoop')
 # Use the default test loop settings.
 test_cfg = dict(type='TestLoop')
-
+'''
 # configure default hooks
 default_hooks = dict(
     # record the time of every iteration.
@@ -135,8 +138,8 @@ env_cfg = dict(
 
 # set visualizer
 vis_backends = [dict(type='LocalVisBackend')]  # use local HDD backend
-visualizer = dict(
-    type='UniversalVisualizer', vis_backends=vis_backends, name='visualizer')
+#visualizer = dict(
+#    type='UniversalVisualizer', vis_backends=vis_backends, name='visualizer')
 
 # set log level
 log_level = 'INFO'
@@ -146,3 +149,4 @@ load_from = None
 
 # whether to resume training from the loaded checkpoint
 resume = False
+'''
