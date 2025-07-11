@@ -11,7 +11,8 @@ from torch import Tensor
 
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType
-from ..utils import DAPPM, PAPPM, BasicBlock, Bottleneck
+from ..utils import DAPPM, PAPPM, BasicBlock
+from ..utils import BottleneckExp2 as Bottleneck
 
 
 class PagFM(BaseModule):

@@ -1,2 +1,2 @@
-export CUDA_VISIBLE_DEVICES=3
-python tools/train.py configs/alex_sebnet/pretrain01_tests/pretrain01_test3_4xb32_in1k.py
+export CUDA_VISIBLE_DEVICES=0
+python tools/train.py configs/alex_sebnet/pretrain01_tests/pretrain01_staged_4xb32_in1k.py

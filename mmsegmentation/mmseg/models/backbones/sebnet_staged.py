@@ -12,12 +12,13 @@ from .base_backbone import BaseBackbone
 from mmseg.registry import MODELS
 from mmengine.runner import CheckpointLoader
 #from mmseg.utils import OptConfigType
-from mmseg.models.utils import BasicBlock, Bottleneck
+from mmseg.models.utils import BasicBlock
+from mmseg.models.utils import BottleneckExp2 as Bottleneck
 from mmseg.models.utils.basic_block import OptConfigType
 
 
 @MODELS.register_module()
-class SEBNet(BaseBackbone):
+class SEBNet_Staged(BaseBackbone):
     """SEBNet backbone.
 
     This backbone is the implementation of `SEBNet: Real-Time Semantic
@@ -44,7 +45,6 @@ class SEBNet(BaseBackbone):
     """
 
     def __init__(self,
-                 ablation: int = 0,
                  in_channels: int = 3,
                  channels: int = 64,
                  num_stem_blocks: int = 2,
@@ -54,68 +54,26 @@ class SEBNet(BaseBackbone):
                  act_cfg: dict = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):
-        super(SEBNet, self).__init__(init_cfg)
+        super(SEBNet_Staged, self).__init__(init_cfg)
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
-        self.ablation = ablation
+
         # stem layer - we need better granularity to integrate the SBD modules
-        self.conv1 =  nn.Sequential(
-             ConvModule(
-                in_channels,
-                channels,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg),
-            ConvModule(
-                channels,
-                channels,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg)
-        )
-        self.stage_1 = self._make_layer(
-            block=BasicBlock,
-            in_channels=channels,
-            channels=channels,
-            num_blocks=num_stem_blocks)
-        self.stage_2 = self._make_layer(
-            block=BasicBlock,
-            in_channels=channels,
-            channels=channels * 2,
-            num_blocks=num_stem_blocks,
-            stride=2)
+        self.stem =  self._make_stem_layer(in_channels, channels, num_stem_blocks)
+        
         self.relu = nn.ReLU()
 
-        # I Branch
-        self.i_branch_layers = nn.ModuleList()
-        for i in range(2):
-            self.i_branch_layers.append(
+        # Backbone stages
+        self.stages = nn.ModuleList()
+        for i in range(4):
+            self.stages.append(
                 self._make_layer(
-                    block=BasicBlock,
-                    in_channels=channels * 2**(i + 1),
-                    channels=channels * 8 if i > 0 else channels * 4,
-                    num_blocks=num_branch_blocks,
+                    block=BasicBlock if i < 3 else Bottleneck,
+                    in_channels=channels * 2**i,
+                    channels=channels * 2**(i + 1) if i < 3 else channels * 2**i,
+                    num_blocks=num_branch_blocks if i < 3 else 2,
                     stride=2))
-        
-        self.i_branch_layers.append(
-            nn.Sequential(
-                self._make_layer(Bottleneck, channels * 8, channels * 4, 1, stride=1),
-                self._make_layer(Bottleneck, channels * 32, channels * 8, 1, stride=1)
-            )
-        )
-            
-        self.dense_expansion = self._make_layer(
-                                block=BasicBlock,
-                                in_channels=channels * 30,
-                                channels=channels * 32, # do 16 if the throughput is too large
-                                num_blocks=1,
-                                stride=2
-        )
         
     def _make_stem_layer(self, in_channels: int, channels: int,
                          num_blocks: int) -> nn.Sequential:
@@ -151,10 +109,6 @@ class SEBNet(BaseBackbone):
 
         layers.append(
             self._make_layer(BasicBlock, channels, channels, num_blocks))
-        layers.append(nn.ReLU())
-        layers.append(
-            self._make_layer(
-                BasicBlock, channels, channels * 2, num_blocks, stride=2))
         layers.append(nn.ReLU())
 
         return nn.Sequential(*layers)
@@ -257,45 +211,21 @@ class SEBNet(BaseBackbone):
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
         """
-        w_out = x.shape[-1] // 8
-        h_out = x.shape[-2] // 8
 
         # stage 0
-        x = self.conv1(x) # (N, C=64, H/4, W/4)
+        x = self.stem(x) # (N, C=64, H/4, W/4)
 
         # stage 1
-        x_1 = self.relu(self.stage_1(x)) # (N, C=64, H/4, W/4)
+        x_1 = self.relu(self.stages[0](x)) # (N, C=128, H/8, W/8)
 
         # stage 2
-        x_2 = self.relu(self.stage_2(x_1)) # (N, C=128, H/8, W/8)
+        x_2 = self.relu(self.stages[1](x_1)) # (N, C=256, H/16, W/16)
 
         # stage 3
-        x_3 = self.relu(self.i_branch_layers[0](x_2)) # (N, C=256, H/16, W/16)
+        x_3 = self.relu(self.stages[2](x_2)) # (N, C=512, H/32, W/32)
 
         # stage 4
-        x_4 = self.relu(self.i_branch_layers[1](x_3)) # (N, C=512, H/32, W/32)
+        x_4 = self.relu(self.stages[3](x_3)) # (N, C=1024, H/64, W/64)
 
-        # stage 5
-        x_5 = self.i_branch_layers[2][0](x_4) # (N, C=1024, H/64, W/64)
-        size = x_5.shape[2:]
-
-        # stage 6 - dense expansion
-        x_concat = torch.cat([
-                    F.interpolate(x_2, size=size, mode='bilinear', align_corners=False),
-                    F.interpolate(x_3, size=size, mode='bilinear', align_corners=False),
-                    F.interpolate(x_4, size=size, mode='bilinear', align_corners=False),
-                    x_5], dim=1) # (N, C=1920, H/64, W/64)
-        
-        x_6 = self.dense_expansion(x_concat) # (N, C=2048, H/64, W/64)
-
-        # stage 7
-        x_7 = self.i_branch_layers[2][1](x_6) # (N, C=2048, H/64, W/64)
-
-        if self.ablation == 0:
-            return (x_7)
-        elif self.ablation == 1 or self.ablation == 2 or self.ablation == 4: # PI Model (1), ID Model (2), PID Model (4)
-            return (x_2, x_3, x_4, x_7)
-        elif self.ablation == 3 or self.ablation == 5 or self.ablation == 6 or self.ablation == 7: # I SBD Model (3), PI SBD Model (5), ID SBD Model (6), PID SBD Model (7)
-            return (x_1, x_2, x_3, x_4, x_5, x_7)
-        else:
-            raise ValueError(f"self.ablation should be one of {{0, 1, 2, 3, 4, 5, 6, 7}}; instead, it is {self.ablation}")    
+        return [x_4]
+    

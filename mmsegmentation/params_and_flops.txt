@@ -1,9 +1,9 @@
 python tools/analysis_tools/get_flops.py \
-    configs/test.py
-    --shape 224 224
+    configs/sebnet/test_sebnet_staged_4xb32_in1k.py \
+    --shape 2048 1024
 
 python tools/analysis_tools/get_flops.py \
-    configs/pidnet/pidnet-imagenet.py \
+    configs/pidnet/pidnet-l_2xb6-120k_1024x1024-cityscapes.py \
     --shape 224 224
 
 python tools/analysis_tools/get_flops.py \

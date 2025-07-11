@@ -48,6 +48,7 @@ from .sebnet_test5 import SEBNetTest5
 from .sebnet_test6 import SEBNetTest6
 from .sebnet_test8 import SEBNetTest8
 from .sebnet_test9 import SEBNetTest9
+from .sebnet_staged import SEBNet_Staged
 from .seresnet import SEResNet
 from .seresnext import SEResNeXt
 from .shufflenet_v1 import ShuffleNetV1
@@ -88,6 +89,7 @@ __all__ = [
     'SEBNetTest6',
     'SEBNetTest8',
     'SEBNetTest9',
+    'SEBNet_Staged',
     'SEResNet',
     'SEResNeXt',
     'ShuffleNetV1',
