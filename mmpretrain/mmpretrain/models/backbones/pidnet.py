@@ -568,14 +568,6 @@ class PIDNet(BaseModule):
         out = x_i
         return out
     
-        x_i = self.spp(x_i)
-        x_i = F.interpolate(
-            x_i,
-            size=[h_out, w_out],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        out = self.dfm(x_p, x_i, x_d)
-        return (temp_p, out, temp_d) if self.training else out
     
     def train(self, mode=True):
         """Override train method to maintain frozen backbone state."""

@@ -17,7 +17,7 @@ from mmpretrain.models.utils.basic_block import OptConfigType
 
 
 @MODELS.register_module()
-class SEBNet(BaseBackbone):
+class SEBNetOriginal(BaseBackbone):
     """SEBNet backbone.
 
     This backbone is the implementation of `SEBNet: Real-Time Semantic
@@ -54,7 +54,7 @@ class SEBNet(BaseBackbone):
                  act_cfg: dict = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):
-        super(SEBNet, self).__init__(init_cfg)
+        super(SEBNetOriginal, self).__init__(init_cfg)
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
@@ -265,4 +265,60 @@ class SEBNet(BaseBackbone):
 
         return x_5
     
+    def loss(self, feats: Tuple[torch.Tensor], data_samples: List[DataSample],
+             **kwargs) -> dict:
+        """Calculate losses from the classification score.
+
+        Args:
+            feats (tuple[Tensor]): The features extracted from the backbone.
+                Multiple stage inputs are acceptable but only the last stage
+                will be used to classify. The shape of every item should be
+                ``(num_samples, num_classes)``.
+            data_samples (List[DataSample]): The annotation data of
+                every samples.
+            **kwargs: Other keyword arguments to forward the loss module.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+        # The part can be traced by torch.fx
+        out = self(feats)
+        _, out_features = out
+
+        # The part can not be traced by torch.fx
+        losses = self._get_loss(out_features, **kwargs)
+        return losses
+
+    def _get_loss(self, out_features: torch.Tensor, **kwargs):
+        """Unpack data samples and compute loss."""
+        # Collapse spatial dimensions
+
+        # compute loss
+        losses = dict()
+        loss = self.loss_module(out_features, **kwargs)
+        print(f"loss: {loss}")
+        import sys
+        sys.exit()
+        losses['loss'] = loss
+
+        return losses
+        '''
+        x_spp = self.spp(x_5) # performs adaptive avg pooling at several scaled kernels: {5, 9, 17}
+        x_out = F.interpolate( # (N, 256, H/8, W/8)
+            x_spp,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        
+        if self.training: # self.training is inherent to MMSeg configurations throughout BaseModule and BaseDecodeHead objects.
+            if config.ABLATION == 0:
+                return x_out
+            elif config.ABLATION == 1 or config.ABLATION == 2 or config.ABLATION == 4: # PI Model (1), ID Model (2), PID Model (4)
+                return (x_2, x_3, x_4, x_out)
+            else: # I SBD Model (3), PI SBD Model (5), ID SBD Model (6), PID SBD Model (7)
+                return (x_1, x_2, x_3, x_4, x_5, x_out)
+        else:
+            return x_out
+        '''
+
 

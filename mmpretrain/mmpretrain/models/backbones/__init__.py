@@ -39,7 +39,7 @@ from .resnet_cifar import ResNet_CIFAR
 from .resnext import ResNeXt
 from .revvit import RevVisionTransformer
 from .riformer import RIFormer
-from .sebnet import SEBNet
+from .sebnet_original import SEBNetOriginal
 from .sebnet_test1 import SEBNetTest1
 from .sebnet_test2 import SEBNetTest2
 from .sebnet_test3 import SEBNetTest3
@@ -48,7 +48,9 @@ from .sebnet_test5 import SEBNetTest5
 from .sebnet_test6 import SEBNetTest6
 from .sebnet_test8 import SEBNetTest8
 from .sebnet_test9 import SEBNetTest9
-from .sebnet_staged import SEBNet_Staged
+from .sebnet import SEBNet
+from .sebnext import SEBNeXt
+from .sebnext_higher_res import SEBNeXtHigherRes
 from .seresnet import SEResNet
 from .seresnext import SEResNeXt
 from .shufflenet_v1 import ShuffleNetV1
@@ -80,7 +82,7 @@ __all__ = [
     'ResNetV1d',
     'ResNeSt',
     'ResNet_CIFAR',
-    'SEBNet',
+    'SEBNetOriginal',
     'SEBNetTest1',
     'SEBNetTest2',
     'SEBNetTest3',
@@ -89,7 +91,9 @@ __all__ = [
     'SEBNetTest6',
     'SEBNetTest8',
     'SEBNetTest9',
-    'SEBNet_Staged',
+    'SEBNet',
+    'SEBNeXt',
+    'SEBNeXtHigherRes',
     'SEResNet',
     'SEResNeXt',
     'ShuffleNetV1',

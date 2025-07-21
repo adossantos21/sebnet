@@ -130,6 +130,7 @@ class DAPPM(BaseModule):
             tuple[Tensor]: The last element should be the backbone's
             output processed by this neck module.
         '''
+        x = [x]
         inputs = x[-1]
         feats = []
         feats.append(self.scales[0](inputs))
@@ -208,6 +209,7 @@ class PAPPM(DAPPM):
             tuple[Tensor]: The last element should be the backbone's
             output processed by this neck module.
         '''
+        x = [x]
         inputs = x[-1]
         x_ = self.scales[0](inputs)
         feats = []

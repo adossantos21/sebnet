@@ -1,2 +1,2 @@
-export CUDA_VISIBLE_DEVICES=0
-python tools/train.py configs/convnext/convnext-base_32xb128_in1k.py
+export CUDA_VISIBLE_DEVICES=3
+python tools/train.py configs/alex_sebnet/pretrain01_tests/pretrain01_staged_lr_adamw_1xb64_in1k.py

@@ -1,3 +1,4 @@
+
 _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py',
@@ -18,12 +19,12 @@ model = dict(
     data_preprocessor=data_preprocessor,
     pretrained=None,
     backbone=dict(
-        type='SEBNeXt',
-        arch='deepest',
-        drop_path_rate=0.5),
+        type='mmpretrain.SEBNeXtHigherRes',
+        arch='nano',
+        drop_path_rate=0.1),
     neck=dict(
         type='DAPPM',
-        in_channels=1024, 
+        in_channels=384, 
         branch_channels=112, 
         out_channels=256, 
         num_scales=5),    # The type of the neck module.
