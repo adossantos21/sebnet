@@ -18,7 +18,7 @@ model=dict(
 optim_wrapper = dict(
     type='GradTrackingOptimWrapper',
     optimizer=dict(
-        lr=8e-3),
+        lr=4e-2),
     clip_grad=None,
 )
 
@@ -29,12 +29,12 @@ train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=300, val_interval=
 
 # runtime setting
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=275)
+    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=300)
 )
 
 custom_hooks = [
     dict(type='EMAHook', momentum=1e-4, priority='ABOVE_NORMAL'),
-    dict(type='GradFlowVisualizationHook', interval=20000, initial_grads=True, show_plot=False, priority='HIGHEST'),
+    dict(type='GradFlowVisualizationHook', interval=300, initial_grads=True, show_plot=False, priority='HIGHEST'),
     dict(type='CustomCheckpointHook', interval=1, save_begin=275, priority='VERY_LOW')
 ]
 # load from which checkpoint

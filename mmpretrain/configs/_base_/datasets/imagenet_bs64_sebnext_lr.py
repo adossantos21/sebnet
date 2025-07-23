@@ -1,5 +1,5 @@
 # dataset settings
-dataset_type = 'ImageNet'
+dataset_type = 'ImageNetSubset'
 data_preprocessor = dict(
     num_classes=1000,
     # RGB format normalization parameters
@@ -58,6 +58,7 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root='data/imagenet',
+        ann_file='meta/train_subset.txt',
         data_prefix='train_subset',
         split='train',
         pipeline=train_pipeline),
