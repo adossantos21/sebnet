@@ -18,7 +18,7 @@ model=dict(
 optim_wrapper = dict(
     type='GradTrackingOptimWrapper',
     optimizer=dict(
-        lr=4e-2),
+        lr=1e-3),
     clip_grad=None,
 )
 

@@ -1,2 +1,2 @@
 export CUDA_VISIBLE_DEVICES=2
-python tools/train.py configs/alex_sebnet/pretrain01_tests/pretrain01_staged_lr_adamw_1xb64_in1k.py
+python tools/train.py configs/alex_sebnet/pretrain01_tests/pretrain01_staged_adamw_1xb64_in1k.py
