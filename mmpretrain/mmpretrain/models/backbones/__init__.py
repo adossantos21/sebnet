@@ -50,6 +50,7 @@ from .sebnet_test8 import SEBNetTest8
 from .sebnet_test9 import SEBNetTest9
 from .sebnet import SEBNet
 from .sebnext import SEBNeXt
+from.sebnext_alt import SEBNeXtAlt
 from .sebnext_higher_res import SEBNeXtHigherRes
 from .seresnet import SEResNet
 from .seresnext import SEResNeXt
@@ -93,6 +94,7 @@ __all__ = [
     'SEBNetTest9',
     'SEBNet',
     'SEBNeXt',
+    'SEBNeXtAlt',
     'SEBNeXtHigherRes',
     'SEResNet',
     'SEResNeXt',

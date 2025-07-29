@@ -1,5 +1,5 @@
 _base_ = [
-    '../../_base_/models/sebnext.py',
+    '../../_base_/models/sebnext_higher_res.py',
     '../../_base_/datasets/imagenet_bs64_sebnext.py',
     '../../_base_/schedules/imagenet_bs1024_adamw_sebnext.py',
     '../../_base_/default_runtime.py',
@@ -12,7 +12,7 @@ train_dataloader = dict(batch_size=64)
 optim_wrapper = dict(
     type='GradTrackingOptimWrapper',
     optimizer=dict(
-        lr=1e-3),
+        lr=4e-3),
     clip_grad=None,
 )
 

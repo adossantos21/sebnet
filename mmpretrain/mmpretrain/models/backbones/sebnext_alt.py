@@ -17,7 +17,7 @@ from mmpretrain.models.utils.basic_block import OptConfigType
 
 
 @MODELS.register_module()
-class SEBNeXt(BaseBackbone):
+class SEBNeXtAlt(BaseBackbone):
     """SEBNeXt backbone.
 
     This backbone is the implementation of `SEBNeXt: Real-Time Semantic
@@ -41,16 +41,48 @@ class SEBNeXt(BaseBackbone):
             'depths': [3, 3, 9, 3],
             'channels': [128, 256, 512, 1024]
         },
-        'roll_medium':{
-            'depths': [2, 8, 2, 2],
+        'xlarge':{
+            'depths': [3, 3, 12, 3],
             'channels': [128, 256, 512, 1024]
         },
+        'xxlarge':{
+            'depths': [3, 3, 15, 3],
+            'channels': [128, 256, 512, 1024]
+        },
+        'xxxlarge':{
+            'depths': [3, 3, 18, 3],
+            'channels': [128, 256, 512, 1024]
+        },
+        'huge':{
+            'depths': [3, 3, 27, 3],
+            'channels': [128, 256, 512, 1024]
+        },
+        'xhuge': {
+            'depths': [3, 3, 27, 3],
+            'channels': [192, 384, 768, 1536]
+        },
+        'xxhuge': {
+            'depths': [3, 3, 27, 3],
+            'channels': [256, 512, 1024, 2048]
+        },
+        'xxxhuge': {
+            'depths': [3, 3, 27, 3],
+            'channels': [352, 704, 1408, 2816]
+        },
+        'rolled_large':{
+            'depths': [3, 9, 3, 3],
+            'channels': [128, 256, 512, 1024]
+        },
+        'custom':{
+            'depths': [3, 3, 9, 3],
+            'channels': [192, 384, 768, 1536]
+        }
     }
     def __init__(self,
                  arch='baseline',
                  in_channels=3,
                  stem_channels=64,
-                 stem_patch_size=4,
+                 stem_patch_size=8,
                  norm_cfg=dict(type='LN2d', eps=1e-6),
                  act_cfg=dict(type='GELU'),
                  linear_pw_conv=True,
@@ -120,12 +152,6 @@ class SEBNeXt(BaseBackbone):
         stem = nn.Sequential(
             nn.Conv2d(
                 in_channels,
-                stem_channels,
-                kernel_size=2,
-                stride=2),
-            build_norm_layer(norm_cfg, stem_channels),
-            nn.Conv2d(
-                stem_channels,
                 self.channels[0],
                 kernel_size=stem_patch_size,
                 stride=stem_patch_size),
@@ -197,7 +223,7 @@ class SEBNeXt(BaseBackbone):
                 param.requires_grad = False
 
     def train(self, mode=True):
-        super(SEBNeXt, self).train(mode)
+        super(SEBNeXtAlt, self).train(mode)
         self._freeze_stages()
 
     def get_layer_depth(self, param_name: str, prefix: str = ''):
