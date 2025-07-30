@@ -20,7 +20,7 @@ train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=300, val_interval=
 
 # runtime setting
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=275)
+    checkpoint=dict(type='CheckpointHook', interval=1, save_begin=300)
 )
 
 custom_hooks = [

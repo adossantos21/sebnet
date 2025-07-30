@@ -4,15 +4,15 @@ _base_ = [
 
 model = dict(
     backbone=dict(
-        arch='baseline',
-        drop_path_rate=0.4),
+        arch='rolled_large',
+        drop_path_rate=0.5),
 )
 
 # schedule setting
 optim_wrapper = dict(
     type='GradTrackingOptimWrapper',
     optimizer=dict(
-        lr=4e-3),
+        lr=1e-3),
     clip_grad=None,
 )
 
@@ -21,4 +21,3 @@ load_from = None
 
 # whether to resume training from the loaded checkpoint
 resume = False
-

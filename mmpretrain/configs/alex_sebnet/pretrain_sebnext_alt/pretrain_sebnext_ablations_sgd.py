@@ -1,28 +1,35 @@
 _base_ = [
     '../../_base_/models/sebnext_alt.py',
     '../../_base_/datasets/imagenetSubset_bs64_sebnext.py',
-    '../../_base_/schedules/imagenet_bs1024_adamw_sebnext.py',
     '../../_base_/default_runtime.py',
 ]
 
 model = dict(
     backbone=dict(
-        arch='rolled_large',
+        arch='baseline',
         drop_path_rate=0.4),
 )
 
 # dataset setting
 train_dataloader = dict(batch_size=64)
 
-# schedule setting
 optim_wrapper = dict(
+    # Use SGD optimizer to optimize parameters.
     type='GradTrackingOptimWrapper',
-    optimizer=dict(
-        lr=9.75e-4),
-    clip_grad=None,
-)
+    optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
 
-train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=300, val_interval=1)
+# The tuning strategy of the learning rate.
+# The 'MultiStepLR' means to use multiple steps policy to schedule the learning rate (LR).
+param_scheduler = dict(
+    type='MultiStepLR', by_epoch=True, milestones=[30, 60, 90], gamma=0.1)
+
+# Training configuration, iterate 100 epochs, and perform validation after every training epoch.
+# 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
+train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
+# Use the default val loop settings.
+val_cfg = dict()
+# Use the default test loop settings.
+test_cfg = dict()
 
 # runtime setting
 default_hooks = dict(
