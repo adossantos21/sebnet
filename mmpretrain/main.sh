@@ -1,2 +1,2 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 python tools/train.py configs/alex_sebnet/pretrain_sebnext_alt/pretrain_sebnext_ablations.py

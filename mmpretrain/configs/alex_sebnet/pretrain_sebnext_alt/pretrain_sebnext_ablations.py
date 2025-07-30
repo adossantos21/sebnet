@@ -7,7 +7,7 @@ _base_ = [
 
 model = dict(
     backbone=dict(
-        arch='large',
+        arch='rolled_large',
         drop_path_rate=0.4),
 )
 
@@ -18,7 +18,7 @@ train_dataloader = dict(batch_size=64)
 optim_wrapper = dict(
     type='GradTrackingOptimWrapper',
     optimizer=dict(
-        lr=4e-3),
+        lr=9.75e-4),
     clip_grad=None,
 )
 
