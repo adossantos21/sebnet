@@ -15,7 +15,7 @@ from mmcv.transforms.utils import cache_randomness
 from mmengine.utils import is_tuple_of
 from numpy import random
 from scipy.ndimage import gaussian_filter
-
+from scipy.ndimage.morphology import distance_transform_edt
 from mmseg.datasets.dataset_wrappers import MultiImageMixDataset
 from mmseg.registry import TRANSFORMS
 
@@ -330,6 +330,7 @@ class RandomCrop(BaseTransform):
 
         results['img'] = img
         results['img_shape'] = img.shape[:2]
+        results['seg_map_shape'] = results['gt_seg_map'].shape
         return results
 
     def __repr__(self):
@@ -1466,7 +1467,612 @@ class GenerateEdge(BaseTransform):
         repr_str += f'edge_width={self.edge_width}, '
         repr_str += f'ignore_index={self.ignore_index})'
         return repr_str
+    
 
+@TRANSFORMS.register_module()
+class Mask2Edge(BaseTransform):
+    """Transform function
+
+    ...
+    """
+    LABEL_IDS = None
+    label2trainId = None
+
+    _mask2bdry_kwargs = dict()
+    
+    def __init__(
+            self,
+            labelIds,
+            ignore_indices=[],
+            label2trainId=None,
+            radius: int = 2,
+            use_cv2: bool = True,
+            quality: int = 0,
+    ):
+        assert len(labelIds) > 0, "ERR: there should be more than 1 labels"
+        self.LABEL_IDS = labelIds
+        assert isinstance(
+            ignore_indices, list
+        ), "ERR: ignore labelIds should be a list"
+        self.ignore_indices = ignore_indices
+        assert radius >= 1, "ERR: radius should be equal or greater than 1"
+        self.radius = radius
+        self.use_cv2=use_cv2
+        self.quality=quality
+
+        # parameters for mask2bdry function
+        self._mask2bdry_kwargs = dict(
+            radius=self.radius,
+            use_cv2=self.use_cv2,
+            quality=self.quality,
+        )
+
+        # if we need to map output edge labels to trainIds
+        self.label2trainId = label2trainId
+
+    def transform(self, results: Dict) -> Dict:
+        mask = results['gt_seg_map']
+        assert mask.ndim == 2, f"mask.ndim should be 2, instead it is {mask.ndim}"
+        onehot_mask = Mask2Edge.mask2onehot(mask, labels=self.LABEL_IDS)
+        edge = Mask2Edge.mask2edge(
+            run_type="loop",
+            instance_sensitive=False,
+            mask=onehot_mask,
+            ignore_indices=self.ignore_indices,
+            **self._mask2bdry_kwargs,
+        )
+
+        if self.label2trainId:
+            # for convinence, we will convert both mask and edge to trainId
+            edge = Mask2Edge.edge_label2trainId(
+                edge=edge, label2trainId=self.label2trainId
+            )
+            mask = Mask2Edge.mask_label2trainId(
+                mask=mask, label2trainId=self.label2trainId
+            )
+
+        results['gt_edge_map'] = edge
+        results['edge_map_shape'] = edge.shape
+        results['radius'] = self.radius
+
+        return results
+    
+    @staticmethod
+    def cv2_mask2bdry(m, ignore_mask, radius, quality):
+        inner = cv2.distanceTransform(
+            ((m + ignore_mask) > 0).astype(np.uint8), cv2.DIST_L2, quality
+        )
+        outer = cv2.distanceTransform(
+            ((1.0 - m) > 0).astype(np.uint8), cv2.DIST_L2, quality
+        )
+        dist = outer + inner
+
+        dist[dist > radius] = 0
+        dist = (dist > 0).astype(np.uint8)
+        return dist
+
+    @staticmethod
+    def scipy_mask2bdry(m, ignore_mask, radius):
+        inner = distance_transform_edt((m + ignore_mask) > 0)
+        outer = distance_transform_edt(1.0 - m)
+        dist = outer + inner
+
+        dist[dist > radius] = 0
+        dist = (dist > 0).astype(np.uint8)
+        return dist
+
+    @staticmethod
+    def mask2bdry(
+        mask: np.ndarray,
+        ignore_mask: np.ndarray,
+        radius: int,
+        use_cv2: bool = True,
+        quality: int = 0,
+    ) -> np.ndarray:
+        if use_cv2:
+            return Mask2Edge.cv2_mask2bdry(
+                m=mask,
+                ignore_mask=ignore_mask,
+                radius=radius,
+                quality=quality,
+            )
+        else:
+            return Mask2Edge.scipy_mask2bdry(
+                m=mask,
+                ignore_mask=ignore_mask,
+                radius=radius,
+            )
+
+    NEIGH_MASK_EAST = 32
+    NEIGH_MASK_NORTH_EAST = 4
+    NEIGH_MASK_NORTH = 2
+    NEIGH_MASK_NORTH_WEST = 1
+    NEIGH_MASK_WEST = 8
+    NEIGH_MASK_SOUTH_WEST = 64
+    NEIGH_MASK_SOUTH = 128
+    NEIGH_MASK_SOUTH_EAST = 256
+    NEIGH_MASK_CENTRE = 16
+
+    MASKS = [
+        NEIGH_MASK_CENTRE,
+        NEIGH_MASK_EAST,
+        NEIGH_MASK_NORTH_EAST,
+        NEIGH_MASK_NORTH,
+        NEIGH_MASK_NORTH_WEST,
+        NEIGH_MASK_WEST,
+        NEIGH_MASK_SOUTH_WEST,
+        NEIGH_MASK_SOUTH,
+        NEIGH_MASK_SOUTH_EAST,
+    ]
+
+    _LUT_INDS = np.arange(512)
+
+    @staticmethod
+    def binary_image_to_lut_indices(x):
+        """
+        Convert a binary image to an index image that can be used with a lookup table
+        to perform morphological operations. Non-zero elements in the image are interpreted
+        as 1, zero elements as 0
+
+        Args:
+            x (np.ndarray): a 2D NumPy array
+
+        Returns:
+            np.ndarray: a 2D NumPy array, same shape as x
+        """
+        if x.ndim != 2:
+            raise ValueError("x should have 2 dimensions, not {}".format(x.ndim))
+
+        # If the dtype of x is not bool, convert
+        if x.dtype != bool:
+            x = x != 0
+
+        # Add
+        x = np.pad(x, [(1, 1), (1, 1)], mode="constant")
+
+        # Convert to LUT indices
+        lut_indices = (
+            x[:-2, :-2] * Mask2Edge.NEIGH_MASK_NORTH_WEST
+            + x[:-2, 1:-1] * Mask2Edge.NEIGH_MASK_NORTH
+            + x[:-2, 2:] * Mask2Edge.NEIGH_MASK_NORTH_EAST
+            + x[1:-1, :-2] * Mask2Edge.NEIGH_MASK_WEST
+            + x[1:-1, 1:-1] * Mask2Edge.NEIGH_MASK_CENTRE
+            + x[1:-1, 2:] * Mask2Edge.NEIGH_MASK_EAST
+            + x[2:, :-2] * Mask2Edge.NEIGH_MASK_SOUTH_WEST
+            + x[2:, 1:-1] * Mask2Edge.NEIGH_MASK_SOUTH
+            + x[2:, 2:] * Mask2Edge.NEIGH_MASK_SOUTH_EAST
+        )
+
+        return lut_indices.astype(np.int32)
+
+    @staticmethod
+    def apply_lut(x, lut):
+        """
+        Perform a morphological operation on the binary image x using the supplied lookup table
+
+        Args:
+            x: input array
+            lut: lookup table
+
+        """
+        if lut.ndim != 1:
+            raise ValueError("lut should have 1 dimension, not {}".format(lut.ndim))
+
+        if lut.shape[0] != 512:
+            raise ValueError(
+                "lut should have 512 entries, not {}".format(lut.shape[0])
+            )
+
+        lut_indices = Mask2Edge.binary_image_to_lut_indices(x)
+
+        return lut[lut_indices]
+
+    @staticmethod
+    def identity_lut():
+        """Create identity lookup tablef"""
+        lut = np.zeros((512,), dtype=bool)
+        inds = np.arange(512)
+
+        lut[(inds & Mask2Edge.NEIGH_MASK_CENTRE) != 0] = True
+
+        return lut
+
+    @staticmethod
+    def _lut_mutate_mask(lut):
+        """
+        Get a mask that shows which neighbourhood shapes result in changes to the image
+
+        Args:
+            lut: lookup table
+
+        Returns:
+            mask indicating which lookup indices result in changes
+        """
+        return lut != Mask2Edge.identity_lut()
+
+    @staticmethod
+    def lut_masks_zero(neigh):
+        """
+        Create a LUT index mask for which the specified neighbour is 0
+
+        Args:
+            neigh: neighbour index; counter-clockwise from 1 staring at the eastern neighbour
+
+        Returns:
+            a LUT index mask
+        """
+        if neigh > 8:
+            neigh -= 8
+        return (Mask2Edge._LUT_INDS & Mask2Edge.MASKS[neigh]) == 0
+
+    @staticmethod
+    def lut_masks_one(neigh):
+        """
+        Create a LUT index mask for which the specified neighbour is 1
+
+        Args:
+            neigh: neighbour index; counter-clockwise from 1 staring at the eastern neighbour
+
+        Returns:
+            a LUT index mask
+        """
+        if neigh > 8:
+            neigh -= 8
+        return (Mask2Edge._LUT_INDS & Mask2Edge.MASKS[neigh]) != 0
+
+    @staticmethod
+    def _thin_cond_g1():
+        """
+        Thinning morphological operation; condition G1
+
+        Returns:
+            a LUT index mask
+        """
+        b = np.zeros(512, dtype=int)
+        for i in range(1, 5):
+            b += Mask2Edge.lut_masks_zero(2 * i - 1) & (
+                Mask2Edge.lut_masks_one(2 * i) | Mask2Edge.lut_masks_one(2 * i + 1)
+            )
+        return b == 1
+
+    @staticmethod
+    def _thin_cond_g2():
+        """
+        Thinning morphological operation; condition G2
+
+        Returns:
+            a LUT index mask
+        """
+        n1 = np.zeros(512, dtype=int)
+        n2 = np.zeros(512, dtype=int)
+        for k in range(1, 5):
+            n1 += Mask2Edge.lut_masks_one(2 * k - 1) | Mask2Edge.lut_masks_one(2 * k)
+            n2 += Mask2Edge.lut_masks_one(2 * k) | Mask2Edge.lut_masks_one(2 * k + 1)
+        m = np.minimum(n1, n2)
+        return (m >= 2) & (m <= 3)
+
+    @staticmethod
+    def _thin_cond_g3():
+        """
+        Thinning morphological operation; condition G3
+
+        Returns:
+            a LUT index mask
+        """
+        return (
+            (Mask2Edge.lut_masks_one(2) | Mask2Edge.lut_masks_one(3) | Mask2Edge.lut_masks_zero(8))
+            & Mask2Edge.lut_masks_one(1)
+        ) == 0
+
+    @staticmethod
+    def _thin_cond_g3_prime():
+        """
+        Thinning morphological operation; condition G3'
+        :return: a LUT index mask
+        """
+        return (
+            (Mask2Edge.lut_masks_one(6) | Mask2Edge.lut_masks_one(7) | Mask2Edge.lut_masks_zero(4))
+            & Mask2Edge.lut_masks_one(5)
+        ) == 0
+
+    @staticmethod
+    def _thin_iter_1_lut():
+        """
+        Thinning morphological operation; lookup table for iteration 1
+
+        Returns:
+            lookup table
+        """
+        lut = Mask2Edge.identity_lut()
+        cond = Mask2Edge._thin_cond_g1() & Mask2Edge._thin_cond_g2() & Mask2Edge._thin_cond_g3()
+        lut[cond] = False
+        return lut
+
+    @staticmethod
+    def _thin_iter_2_lut():
+        """
+        Thinning morphological operation; lookup table for iteration 2
+
+        Returns:
+            lookup table
+        """
+        lut = Mask2Edge.identity_lut()
+        cond = Mask2Edge._thin_cond_g1() & Mask2Edge._thin_cond_g2() & Mask2Edge._thin_cond_g3_prime()
+        lut[cond] = False
+        return lut
+
+    @staticmethod
+    def binary_thin(x, max_iter=None):
+        """
+        Binary thinning morphological operation
+
+        Args:
+            x: a binary image, or an image that is to be converted to a binary image
+            max_iter (Optional[int]): maximum number of iterations; default is ``None``
+                that results in an infinite number of iterations (note that ``binary_thin``
+                will automatically terminate when no more changes occur)
+
+        Returns:
+            bool mask
+        """
+        thin1 = Mask2Edge._thin_iter_1_lut()
+        thin2 = Mask2Edge._thin_iter_2_lut()
+        thin1_mut = Mask2Edge._lut_mutate_mask(thin1)
+        thin2_mut = Mask2Edge._lut_mutate_mask(thin2)
+
+        iter_count = 0
+        while max_iter is None or iter_count < max_iter:
+            # Iter 1
+            lut_indices = Mask2Edge.binary_image_to_lut_indices(x)
+            x_mut = thin1_mut[lut_indices]
+            if x_mut.sum() == 0:
+                break
+
+            x = thin1[lut_indices]
+
+            # Iter 2
+            lut_indices = Mask2Edge.binary_image_to_lut_indices(x)
+            x_mut = thin2_mut[lut_indices]
+            if x_mut.sum() == 0:
+                break
+
+            x = thin2[lut_indices]
+
+            iter_count += 1
+
+        return x
+
+    @staticmethod
+    def loop_mask2edge(
+        mask,
+        ignore_indices,
+        radius,
+        thin=False,
+        use_cv2=True,
+        quality=0,
+    ):
+        """mask2edge with looping"""
+        assert mask.ndim == 3
+        num_labels, h, w = mask.shape
+
+        # make ignore mask
+        ignore_mask = np.zeros((h, w), dtype=np.uint8)
+        for i in ignore_indices:
+            ignore_mask += mask[i]
+
+        edges = np.zeros_like(mask)
+        for label in range(num_labels):
+            m = mask[label]
+
+            if label in ignore_indices:
+                continue
+
+            # if there are no class labels in the mask
+            if not np.count_nonzero(m):
+                continue
+
+            edge = Mask2Edge.mask2bdry(
+                mask=m,
+                ignore_mask=ignore_mask,
+                radius=radius,
+                use_cv2=use_cv2,
+                quality=quality,
+            )
+
+            # thin the boundaries
+            if thin:
+                edge = Mask2Edge.binary_thin(edge).astype(np.uint8)
+
+            edges[label] = edge
+
+        return edges
+
+    @staticmethod
+    def loop_instance_mask2edge(
+        mask,
+        inst_mask,
+        inst_labelIds,
+        ignore_indices,
+        radius,
+        thin=False,
+        use_cv2=True,
+        quality=0,
+        _inst_len=5,
+        _inst_id_dig=2,
+    ):
+        """mask2edge with looping (instance sensitive)"""
+        assert mask.ndim == 3
+        num_labels, h, w = mask.shape
+
+        # make ignore mask
+        ignore_mask = np.zeros((h, w), dtype=np.uint8)
+        for i in ignore_indices:
+            ignore_mask += mask[i]
+
+        # make sure that instance labels are sorted
+        inst_labels = sorted(inst_labelIds)
+        if inst_labels[0] == 0:
+            # when the first label is 0, it's probably not right
+            warnings.warn(
+                "inst labels has labelId of 0, but this should be the background Id"
+            )
+        min_inst_id = inst_labels[0] * (10 ** (_inst_len - _inst_id_dig))
+
+        # create a lookup dictionary {label: [instances]}
+        label_inst = {}
+        _cand_insts = np.unique(inst_mask)
+        for inst_label in _cand_insts:
+            if inst_label < min_inst_id:
+                continue
+
+            # convert to string and fill
+            inst_label = str(inst_label).zfill(_inst_len)
+
+            _label = int(inst_label[:_inst_id_dig])
+            _inst = int(inst_label[_inst_id_dig:])
+            if _label not in label_inst.keys():
+                label_inst[_label] = [_inst]
+            else:
+                label_inst[_label].append(_inst)
+
+        args = dict(
+            radius=radius,
+            use_cv2=use_cv2,
+            quality=quality,
+        )
+
+        edges = np.zeros_like(mask)
+        for label in range(num_labels):
+            m = mask[label]
+
+            if label in ignore_indices:
+                continue
+
+            # if there are no class labels in the mask
+            if not np.count_nonzero(m):
+                continue
+
+            dist = Mask2Edge.mask2bdry(mask=m, ignore_mask=ignore_mask, **args)
+
+            # per instance boundaries
+            if label in label_inst.keys():
+                instances = label_inst[label]  # list
+                for instance in instances:
+                    iid = int(str(label) + str(instance).zfill(3))
+                    _mask = inst_mask == iid
+                    dist = dist | Mask2Edge.mask2bdry(
+                        mask=_mask,
+                        ignore_mask=ignore_mask,
+                        **args,
+                    )
+
+            # thin the boundaries
+            if thin:
+                dist = Mask2Edge.binary_thin(dist).astype(np.uint8)
+
+            edges[label] = dist
+
+        return edges
+
+    @staticmethod
+    def mask2onehot(mask, labels):
+        """
+        Converts a segmentation mask (H,W) to (K,H,W) where the last dim is a one
+        hot encoding vector
+        """
+        c = mask.shape[0]
+        assert (
+            len(labels) > 0
+        ), "`labels` should be a list with more than 1 elements"
+        assert c >= len(
+            labels
+        ), "tried to convert into onehot with more labels than the original mask"
+        _mask = [mask == i for i in labels]
+        return np.array(_mask).astype(np.uint8)
+
+    @staticmethod
+    def mask2edge(
+        run_type: str,
+        instance_sensitive: bool,
+        **kwargs,
+    ):
+        """mask2edge function
+
+        Args:
+            run_type (str): can choose between ``loop`` or ``mp`` where ``loop`` loops
+                over the classes while ``mp`` uses ``multiprocessing``.
+            instance_sensitive (bool): set to ``True`` if generating instance-aware edges.
+            mask (np.ndarray): input one-hot mask
+            inst_mask (np.ndarray): instance mask (required for instance sensitive)
+            inst_labelIds (List[int]): labels that have instances
+            ignore_indices (List[int]): ignore indices (corresponds to order of labelIds)
+            radius (int): edge radius (thickness)
+            use_cv2 (bool): whether to use ``cv2`` distance transform (default ``True``)
+            quality (int): default 0
+
+        Returns:
+            np.ndarray: generated edges.
+
+        Raises:
+            ValueError: if ``run_type`` is not set correctly.
+        """
+
+        if run_type == "loop":
+            if instance_sensitive:
+                return Mask2Edge.loop_instance_mask2edge(**kwargs)
+            else:
+                return Mask2Edge.loop_mask2edge(**kwargs)
+        else:
+            raise ValueError(f"{run_type} is not a valid run type")
+
+    @staticmethod
+    def edge_label2trainId(edge: np.ndarray, label2trainId: dict) -> np.ndarray:
+        assert (
+            len(edge.shape) == 3
+        ), f"ERR: should be 3 channel input but got {edge.shape}"
+        _, h, w = edge.shape
+        edges_trainIds = np.zeros((len(label2trainId), h, w), dtype=np.uint8)
+        for labelId, trainId in label2trainId.items():
+            edges_trainIds[trainId] = edge[labelId, ...]
+        return edges_trainIds
+
+    @staticmethod
+    def mask_label2trainId(mask: np.ndarray, label2trainId: dict) -> np.ndarray:
+        """Python version of `labelid2trainid` function for segmentation data
+
+        Args:
+            mask: single channel image containing segmentation label
+
+        Returns:
+            np.ndarray
+        """
+
+        if len(mask.shape) == 2:
+            h, w = mask.shape
+        elif len(mask.shape) == 3:
+            h, w, c = mask.shape
+            assert c == 1, f"ERR: input label has {c} channels which should be 1"
+        else:
+            raise ValueError()
+
+        # 1. create an array populated with 255 (background pixel)
+        trainId_mask = 255 * np.ones((h, w), dtype=np.uint8)  # 8-bit array
+
+        # 2. map all pixels from `label` to `trainId`
+        for labelId, trainId in label2trainId.items():
+            idx = mask == labelId
+            trainId_mask[idx] = trainId
+        return trainId_mask
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'labelIds={self.LABEL_IDS}, '
+        repr_str += f'ignore_indices={self.ignore_indices}'
+        repr_str += f'label2trainId={self.label2trainId}'
+        repr_str += f'radius={self.radius}'
+        repr_str += f'use_cv2={self.use_cv2}'
+        repr_str += f'quality={self.quality}'
+        return repr_str
 
 @TRANSFORMS.register_module()
 class ResizeShortestEdge(BaseTransform):

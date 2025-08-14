@@ -124,6 +124,7 @@ class LoadAnnotations(MMCV_LoadAnnotations):
             for old_id, new_id in results['label_map'].items():
                 gt_semantic_seg[gt_semantic_seg_copy == old_id] = new_id
         results['gt_seg_map'] = gt_semantic_seg
+        results['seg_map_shape'] = gt_semantic_seg.shape
         results['seg_fields'].append('gt_seg_map')
 
     def __repr__(self) -> str:

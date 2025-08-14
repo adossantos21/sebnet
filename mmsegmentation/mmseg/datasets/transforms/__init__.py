@@ -9,11 +9,11 @@ from .transforms import (CLAHE, AdjustGamma, Albu, BioMedical3DPad,
                          BioMedical3DRandomCrop, BioMedical3DRandomFlip,
                          BioMedicalGaussianBlur, BioMedicalGaussianNoise,
                          BioMedicalRandomGamma, ConcatCDInput, GenerateEdge,
-                         PhotoMetricDistortion, RandomCrop, RandomCutOut,
+                         Mask2Edge, PhotoMetricDistortion, RandomCrop, RandomCutOut,
                          RandomDepthMix, RandomFlip, RandomMosaic,
                          RandomRotate, RandomRotFlip, Rerange, Resize,
                          ResizeShortestEdge, ResizeToMultiple, RGB2Gray,
-                         SegRescale)
+                         SegRescale,)
 
 # yapf: enable
 __all__ = [
@@ -21,7 +21,7 @@ __all__ = [
     'PhotoMetricDistortion', 'RandomRotate', 'AdjustGamma', 'CLAHE', 'Rerange',
     'RGB2Gray', 'RandomCutOut', 'RandomMosaic', 'PackSegInputs',
     'ResizeToMultiple', 'LoadImageFromNDArray', 'LoadBiomedicalImageFromFile',
-    'LoadBiomedicalAnnotation', 'LoadBiomedicalData', 'GenerateEdge',
+    'LoadBiomedicalAnnotation', 'LoadBiomedicalData', 'Mask2Edge', 'GenerateEdge',
     'ResizeShortestEdge', 'BioMedicalGaussianNoise', 'BioMedicalGaussianBlur',
     'BioMedical3DRandomFlip', 'BioMedicalRandomGamma', 'BioMedical3DPad',
     'RandomRotFlip', 'Albu', 'LoadSingleRSImageFromFile', 'ConcatCDInput',

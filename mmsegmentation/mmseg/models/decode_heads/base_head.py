@@ -96,6 +96,11 @@ class BaselineHead(BaseDecodeHead):
 
     def forward(self, x):
         """Forward function."""
+        print(f"type(x): {type(x)}")
+        print(f"len(x): {len(x)}")
+        print(f"type(x[-1]): {type(x[-1])}")
+        import sys
+        sys.exit()
         x = x[-1]
         output = self.seg_head(x, self.cls_seg)
         return output
