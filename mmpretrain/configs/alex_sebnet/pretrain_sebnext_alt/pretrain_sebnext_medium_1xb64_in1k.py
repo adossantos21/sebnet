@@ -5,7 +5,7 @@ _base_ = [
 model = dict(
     backbone=dict(
         arch='medium',
-        drop_path_rate=0.1),
+        drop_path_rate=0.4),
 )
 
 # load from which checkpoint

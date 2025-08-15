@@ -3,7 +3,7 @@ from mmpretrain.registry import LOOPS
 from typing import Sequence
 
 @LOOPS.register_module()
-class GradientTrackingTrainLoop(EpochBasedTrainLoop):
+class GradientTrackingEpochTrainLoop(EpochBasedTrainLoop):
     def run_iter(self, idx, data_batch: Sequence[dict]) -> None:
         """Iterate one min-batch.
 
