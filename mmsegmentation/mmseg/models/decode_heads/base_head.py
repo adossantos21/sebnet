@@ -96,11 +96,6 @@ class BaselineHead(BaseDecodeHead):
 
     def forward(self, x):
         """Forward function."""
-        print(f"type(x): {type(x)}")
-        print(f"len(x): {len(x)}")
-        print(f"type(x[-1]): {type(x[-1])}")
-        import sys
-        sys.exit()
         x = x[-1]
         output = self.seg_head(x, self.cls_seg)
         return output
@@ -174,8 +169,13 @@ class BaselineHead(BaseDecodeHead):
             seg_weight = self.sampler.sample(seg_logits, seg_label)
         else:
             seg_weight = None
+        #print(f"seg_label shape: {seg_label.shape}")
         seg_label = seg_label.squeeze(1)
-
+        #print(f"torch.argmax(seg_logits, dim=1): {torch.argmax(seg_logits, dim=1)}")
+        #print(f"seg_label shape: {seg_label.shape}")
+        #print(f"seg_logits shape: {seg_logits.shape}")
+        #import sys
+        #sys.exit()
         if not isinstance(self.loss_decode, nn.ModuleList):
             losses_decode = [self.loss_decode]
         else:

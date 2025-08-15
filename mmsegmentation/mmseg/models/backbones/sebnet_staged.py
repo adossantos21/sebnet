@@ -227,5 +227,5 @@ class SEBNet_Staged(BaseBackbone):
         # stage 4
         x_4 = self.relu(self.stages[3](x_3)) # (N, C=1024, H/64, W/64)
 
-        return [x_4]
+        return [x_4] # should return all relevant stages for different heads. Each head will select which backbone output to manipulate.
     
