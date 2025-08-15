@@ -152,6 +152,13 @@ class BaselineCASENetHead(BaseDecodeHead):
             align_corners=self.align_corners)
         sem_label = sem_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
+        #print(f"torch.unique(bd_multi_label): {torch.unique(bd_multi_label)}")
+        tmp = bd_multi_label[0]
+        #for tmp in bd_multi_label:
+        #    for cls in tmp:
+        #        print(f"torch.unique(cls): {torch.unique(cls)}")
+        #import sys
+        #sys.exit()
         loss['loss_ce'] = self.loss_decode[0](output_logits, sem_label)
         loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
         loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
