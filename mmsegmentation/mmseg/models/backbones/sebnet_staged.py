@@ -50,7 +50,7 @@ class SEBNet_Staged(BaseBackbone):
                  num_stem_blocks: int = 2,
                  num_branch_blocks: int = 3,
                  align_corners: bool = False,
-                 norm_cfg: dict = dict(type='BN'),
+                 norm_cfg: dict = dict(type='BN', requires_grad=True),
                  act_cfg: dict = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):
@@ -200,6 +200,7 @@ class SEBNet_Staged(BaseBackbone):
             ckpt = CheckpointLoader.load_checkpoint(
                 self.init_cfg['checkpoint'], map_location='cpu')
             self.load_state_dict(ckpt, strict=False)
+            print(f"Loaded checkpoint succesfully")
 
     def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
         """Forward function.
@@ -213,10 +214,10 @@ class SEBNet_Staged(BaseBackbone):
         """
 
         # stage 0
-        x = self.stem(x) # (N, C=64, H/4, W/4)
+        x_0 = self.stem(x) # (N, C=64, H/4, W/4)
 
         # stage 1
-        x_1 = self.relu(self.stages[0](x)) # (N, C=128, H/8, W/8)
+        x_1 = self.relu(self.stages[0](x_0)) # (N, C=128, H/8, W/8)
 
         # stage 2
         x_2 = self.relu(self.stages[1](x_1)) # (N, C=256, H/16, W/16)
@@ -227,5 +228,5 @@ class SEBNet_Staged(BaseBackbone):
         # stage 4
         x_4 = self.relu(self.stages[3](x_3)) # (N, C=1024, H/64, W/64)
 
-        return [x_4] # should return all relevant stages for different heads. Each head will select which backbone output to manipulate.
+        return [x_0, x_1, x_2, x_3, x_4] # should return all relevant stages for different heads. Each head will select which backbone output to manipulate.
     

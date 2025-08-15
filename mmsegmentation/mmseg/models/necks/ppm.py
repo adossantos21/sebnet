@@ -156,7 +156,7 @@ class DAPPM(BaseModule):
 
         out = self.compression(torch.cat(feats,
                                          dim=1)) + self.shortcut(inputs)
-        x[-1] = out
+        x.append(out)
         
         return tuple(x)
 
