@@ -132,7 +132,6 @@ class BaselineCASENetHead(BaseDecodeHead):
 
     def loss_by_feat(self, seg_logits: List[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        loss = dict()
         output_logits, side5_logits, fuse_logits = seg_logits
         sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
         output_logits = resize(
@@ -153,15 +152,21 @@ class BaselineCASENetHead(BaseDecodeHead):
         sem_label = sem_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
         #print(f"torch.unique(bd_multi_label): {torch.unique(bd_multi_label)}")
-        tmp = bd_multi_label[0]
+        #tmp = bd_multi_label[0]
         #for tmp in bd_multi_label:
         #    for cls in tmp:
         #        print(f"torch.unique(cls): {torch.unique(cls)}")
         #import sys
         #sys.exit()
+        logits = dict(
+            seg_logits=seg_logits,
+            side5_logits=side5_logits,
+            fuse_logits=fuse_logits
+        )
+        loss = dict()
         loss['loss_ce'] = self.loss_decode[0](output_logits, sem_label)
         loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
         loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
         loss['acc_seg'] = accuracy(
             output_logits, sem_label, ignore_index=self.ignore_index)
-        return loss
+        return loss, logits

@@ -2,16 +2,16 @@
 import os
 import os.path as osp
 import warnings
-from typing import Optional, Sequence
+from typing import Optional, Sequence, List
 
-import mmcv
-from mmengine.fileio import get
 from mmengine.hooks import Hook
 from mmengine.runner import Runner
 from mmengine.visualization import Visualizer
 
 from mmseg.registry import HOOKS
 from mmseg.structures import SegDataSample
+import torch
+import matplotlib.pyplot as plt
 
 
 @HOOKS.register_module()
@@ -38,30 +38,16 @@ class FeatureMapVisualizationHook(Hook):
     """
 
     def __init__(self,
-                 interval: int = 50,
-                 initial_maps: bool = True,
-                 show: bool = False,
-                 wait_time: float = 0.,
-                 backend_args: Optional[dict] = None):
-        self._visualizer: Visualizer = Visualizer.get_current_instance()
-        self.interval = interval
-        self.initial_maps = initial_maps
-        
-        self.show = show
-        if self.show:
-            # No need to think about vis backends.
-            self._visualizer._vis_backends = {}
-            warnings.warn('The show is True, it means that only '
-                          'the prediction results are visualized '
-                          'without storing data, so vis_backends '
-                          'needs to be excluded.')
+                 img_name: str = "path/to/image.png",
+                 rstrip: Optional[str] = None,
+                 out_dir: str = None):
+        assert osp.isfile(img_name), f"img_name variable path is '{img_name}'; however, this file does not exist on this disk."
+        self.img_name = img_name
+        self.rstrip = rstrip
+        self.out_dir = out_dir
 
-        self.wait_time = wait_time
-        self.backend_args = backend_args.copy() if backend_args else None
-        self._test_index = 0
-
-    def after_train_iter(self, runner: Runner, batch_idx: int, data_batch: dict,
-                       outputs: Sequence[SegDataSample]) -> None:
+    def custom_train_iter(self, runner: Runner, batch_idx: int, data_batch: dict,
+                       outputs: Sequence[SegDataSample], logits: dict) -> None:
         """Run after every ``self.interval`` validation iterations.
 
         Args:
@@ -71,61 +57,54 @@ class FeatureMapVisualizationHook(Hook):
             outputs (Sequence[:obj:`SegDataSample`]]): A batch of data samples
                 that contain annotations and predictions.
         """
-        '''
-        if self.initial_maps==True and runner.iter>=50:
-            # Determine save directory
-            print(f"data_batch.keys(): {data_batch.keys()}")
-            # Feature maps are definitely in outputs.data key.
-            import sys
-            sys.exit()
-            feature_maps = "feature_maps"
-            if self.out_dir is None:
-                save_dir = osp.join(runner._log_dir, feature_maps)
-            else:
-                basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-                date = osp.basename(runner._log_dir.rstrip(osp.sep))
-                self.out_dir = osp.join(self.out_dir, basename, date, feature_maps)
-                save_dir = self.out_dir
-                
-            os.makedirs(save_dir, exist_ok=True)
+        import sys
+        for idx in range(runner.train_dataloader.batch_size):
+            img_path = data_batch['data_samples'][idx].img_path
+            if img_path == self.img_name:
+                self.save_feature_maps(runner, img_path, logits, idx)
+                print(f"Found feature map and saved it successfully")
+                sys.exit()
+        
+        #print(f"outputs: {outputs}")
+        #print(f"logits.keys(): {logits.keys()}")
+        #print(f"data_batch: {data_batch.keys()}")
+        #print(f"data_batch: {data_batch}")
+        #import sys
+        #sys.exit()
+        #if self.every_n_train_iters(runner, self.interval):
+        #    self.save_feature_maps(runner, data_batch, logits)
+        
+        #if self.initial_maps==True and runner.iter==50:
+        #    self.save_feature_maps(runner, outputs, logits)
+
+    def save_feature_maps(self, runner: Runner, img_path: str, logits: List[torch.Tensor], idx: int):
+        # Determine save directory
+        feature_maps = "feature_maps"
+        if self.out_dir is None:
+            save_dir = osp.join(runner._log_dir, feature_maps)
+        else:
+            basename = osp.basename(runner.work_dir.rstrip(osp.sep))
+            date = osp.basename(runner._log_dir.rstrip(osp.sep))
+            self.out_dir = osp.join(self.out_dir, basename, date, feature_maps)
+            save_dir = self.out_dir
+        os.makedirs(save_dir, exist_ok=True)
 
         # Create save path with iteration number
+        img_name, ext = osp.splitext(osp.basename(img_path))
+        if self.rstrip is not None:
+            img_name = img_name.rstrip(self.rstrip)
+        for k, v in logits.items():
             save_path = osp.join(
                 save_dir, 
-                f'gradient_flow_epoch_{runner.epoch}_iter_{runner.iter + 1}.png'
-            )
-            
-            
-
-            # Save feature maps
-            self.save_feature_maps(
-                runner.model.named_parameters(), 
-                save_path=save_path
+                f'Iter_{runner.iter}_{k}_{img_name}_featuremap{ext}'
             )
 
-        if self.every_n_train_iters(runner, self.interval):
-            # Determine save directory
-            feature_maps = "feature_maps"
-            if self.out_dir is None:
-                save_dir = osp.join(runner._log_dir, feature_maps)
-            else:
-                basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-                date = osp.basename(runner._log_dir.rstrip(osp.sep))
-                self.out_dir = osp.join(self.out_dir, basename, date, feature_maps)
-                save_dir = self.out_dir
-                
-            os.makedirs(save_dir, exist_ok=True)
-
-        # Create save path with iteration number
-            save_path = osp.join(
-                save_dir, 
-                f'gradient_flow_epoch_{runner.epoch}_iter_{runner.iter + 1}.png'
+            # Extract raw, unnormalized logits from first data
+            # logits = outputs[0].seg_logits.get(key='data') # these are the prediction logits for validation
+            print(f"key {k} value type: {type(v)}")
+            print(f"key {k} value length: {len(v)}")
+            viz_fmap = torch.mean(v[idx], dim=0).cpu().detach()
+            plt.imsave(save_path, viz_fmap, cmap='jet')
+            runner.logger.info(
+                f'Feature maps saved to {save_path} at iteration {runner.iter}'
             )
-
-            # Save feature maps
-            self.save_feature_maps(
-                runner.model.named_parameters(), 
-                save_path=save_path
-            )
-        '''
-

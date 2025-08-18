@@ -22,7 +22,7 @@ data_preprocessor = dict(
     size=crop_size)
 
 model = dict(
-    type='EncoderDecoder',
+    type='EncoderDecoderWithFeats',
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='SEBNet_Staged',          # The type of the backbone module.
@@ -107,7 +107,7 @@ test_dataloader = val_dataloader
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(type='mmpretrain.GradientTrackingIterTrainLoop', max_iters=iters, val_interval=1000)
+train_cfg = dict(type='GradientsFeaturesIterTrainLoop', max_iters=iters, val_interval=1000)
 # Use the default val loop settings.
 val_cfg = dict(type='ValLoop')
 # Use the default test loop settings.
@@ -131,9 +131,9 @@ custom_hooks = [
         type='mmpretrain.GradFlowVisualizationHook'),
     dict(
         type='FeatureMapVisualizationHook',
-        initial_maps=True,
-        interval=12000,
-        show=False,
+        img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
+        rstrip='_leftImg8bit',
+        out_dir=None,
         priority='HIGHEST'
     )
 ]
