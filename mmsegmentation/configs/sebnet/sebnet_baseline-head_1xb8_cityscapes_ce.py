@@ -68,9 +68,10 @@ train_pipeline = [
     dict(type='PhotoMetricDistortion'),
     dict(type='PackSegInputs')
 ]
-train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
+train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
 
 iters = 120000
+val_interval=1000
 # optimizer
 #optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
 #optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
@@ -96,7 +97,7 @@ test_dataloader = val_dataloader
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(type='mmpretrain.GradientTrackingIterTrainLoop', max_iters=iters, val_interval=1000)
+train_cfg = dict(type='mmpretrain.GradientTrackingIterTrainLoop', max_iters=iters, val_interval=val_interval)
 # Use the default val loop settings.
 val_cfg = dict(type='ValLoop')
 # Use the default test loop settings.
@@ -107,7 +108,8 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, interval=iters // 10),
+        type='CheckpointHook', by_epoch=False, save_begin=120000, save_last=False,
+        interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
 
@@ -118,6 +120,8 @@ custom_hooks = [
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
+    dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=-1, 
+         save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW')
 ]
 
 randomness = dict(seed=304)

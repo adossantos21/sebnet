@@ -101,10 +101,14 @@ class FeatureMapVisualizationHook(Hook):
 
             # Extract raw, unnormalized logits from first data
             # logits = outputs[0].seg_logits.get(key='data') # these are the prediction logits for validation
-            print(f"key {k} value type: {type(v)}")
-            print(f"key {k} value length: {len(v)}")
-            viz_fmap = torch.mean(v[idx], dim=0).cpu().detach()
+            #print(f"key {k} value type: {type(v)}")
+            #print(f"key {k} value length: {len(v)}")
+            #print(f"idx: {idx}")
+            #print(f"key {k} value[idx] shape: {v[idx].shape}")
+            viz_fmap = torch.mean(v[idx], dim=0).cpu().detach().numpy()
             plt.imsave(save_path, viz_fmap, cmap='jet')
             runner.logger.info(
-                f'Feature maps saved to {save_path} at iteration {runner.iter}'
+                f'{k} Feature maps saved to {save_path} at iteration {runner.iter}'
             )
+            #import sys
+            #sys.exit()

@@ -159,7 +159,7 @@ class BaselineCASENetHead(BaseDecodeHead):
         #import sys
         #sys.exit()
         logits = dict(
-            seg_logits=seg_logits,
+            seg_logits=output_logits,
             side5_logits=side5_logits,
             fuse_logits=fuse_logits
         )

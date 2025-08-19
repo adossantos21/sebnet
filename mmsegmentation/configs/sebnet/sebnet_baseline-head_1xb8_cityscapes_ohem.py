@@ -22,7 +22,7 @@ data_preprocessor = dict(
     size=crop_size)
 
 model = dict(
-    type='EncoderDecoderWithFeats',
+    type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='SEBNet_Staged',          # The type of the backbone module.
@@ -40,28 +40,20 @@ model = dict(
         out_channels=256, 
         num_scales=5),    # The type of the neck module.
     decode_head=dict(
-        type='BaselineCASENetHead',     # The type of the classification head module.
+        type='BaselineHead',     # The type of the classification head module.
         # All fields except `type` come from the __init__ method of class `LinearClsHead`
         # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
         num_classes=19,
         in_channels=256,
-        loss_decode=[
-            dict(
+        channels=256,
+        loss_decode=dict(
                 type='OhemCrossEntropy',
                 thres=0.9,
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
                 loss_name='loss_ce'),
-            dict(
-                type='MultiLabelEdgeLoss',
-                loss_weight=5.0,
-                loss_name='loss_side5'),
-            dict(
-                type='MultiLabelEdgeLoss',
-                loss_weight=5.0,
-                loss_name='loss_fuse')
-        ]),
+    ),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
 
@@ -76,7 +68,6 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
@@ -108,7 +99,7 @@ test_dataloader = val_dataloader
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(type='GradientsFeaturesIterTrainLoop', max_iters=iters, val_interval=val_interval)
+train_cfg = dict(type='mmpretrain.GradientTrackingIterTrainLoop', max_iters=iters, val_interval=val_interval)
 # Use the default val loop settings.
 val_cfg = dict(type='ValLoop')
 # Use the default test loop settings.
@@ -119,8 +110,8 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=120001,
-        interval=val_interval, save_best=['mAcc', 'mIoU'], rule='greater'),
+        type='CheckpointHook', by_epoch=False, save_begin=120000, save_last=False,
+        interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
 
@@ -131,15 +122,8 @@ custom_hooks = [
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
-    dict(
-        type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
-        rstrip='_leftImg8bit',
-        out_dir=None,
-        priority='HIGHEST'
-    ),
-    dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=val_interval, 
-         save_best=['mAcc', 'mIoU'], rule='greater', priority='VERY_LOW')
+    dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=-1, 
+         save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW')
 ]
 
 randomness = dict(seed=304)

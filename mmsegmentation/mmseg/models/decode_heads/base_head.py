@@ -182,11 +182,17 @@ class BaselineHead(BaseDecodeHead):
             losses_decode = self.loss_decode
         for loss_decode in losses_decode:
             if loss_decode.loss_name not in loss:
-                loss[loss_decode.loss_name] = loss_decode(
-                    seg_logits,
-                    seg_label,
-                    weight=seg_weight,
-                    ignore_index=self.ignore_index)
+                if str(loss_decode) != 'OhemCrossEntropy()':
+                    loss[loss_decode.loss_name] = loss_decode(
+                        seg_logits,
+                        seg_label,
+                        weight=seg_weight,
+                        ignore_index=self.ignore_index)
+                else:
+                    loss[loss_decode.loss_name] = loss_decode(
+                        seg_logits,
+                        seg_label
+                    )
             else:
                 loss[loss_decode.loss_name] += loss_decode(
                     seg_logits,
