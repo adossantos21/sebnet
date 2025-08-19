@@ -12,7 +12,8 @@ from mmpretrain.registry import MODELS
 from mmpretrain.structures import DataSample
 from mmengine.runner import CheckpointLoader
 #from mmpretrain.utils import OptConfigType
-from mmpretrain.models.utils import BasicBlock, Bottleneck
+from mmpretrain.models.utils import BasicBlock
+from mmpretrain.models.utils import BottleneckExp2 as Bottleneck
 from mmpretrain.models.utils.basic_block import OptConfigType
 
 
@@ -23,30 +24,11 @@ class SEBNet(BaseBackbone):
     This backbone is the implementation of `SEBNet: Real-Time Semantic
     Segmentation with Semantic Boundary Detection Conditioning.
 
-    Licensed under the MIT License.
-
-    Args:
-        in_channels (int): The number of input channels. Default: 3.
-        channels (int): The number of channels in the stem layer. Default: 64.
-        ppm_channels (int): The number of channels in the PPM layer.
-            Default: 96.
-        num_stem_blocks (int): The number of blocks in the stem layer.
-            Default: 2.
-        num_branch_blocks (int): The number of blocks in the branch layer.
-            Default: 3.
-        align_corners (bool): The align_corners argument of F.interpolate.
-            Default: False.
-        norm_cfg (dict): Config dict for normalization layer.
-            Default: dict(type='BN').
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='ReLU', inplace=True).
-        init_cfg (dict): Config dict for initialization. Default: None.
     """
 
     def __init__(self,
                  in_channels: int = 3,
                  channels: int = 64,
-                 ppm_channels: int = 96,
                  num_stem_blocks: int = 2,
                  num_branch_blocks: int = 3,
                  align_corners: bool = False,
@@ -60,41 +42,22 @@ class SEBNet(BaseBackbone):
         self.align_corners = align_corners
 
         # stem layer - we need better granularity to integrate the SBD modules
-        self.conv1 =  nn.Sequential(
-             ConvModule(
-                in_channels,
-                channels,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg),
-            ConvModule(
-                channels,
-                channels,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg)
-        )
-        self.stage_1 = self._make_layer(
-            block=BasicBlock,
-            in_channels=channels,
-            channels=channels,
-            num_blocks=num_stem_blocks)
-        self.stage_2 = self._make_layer(
-            block=BasicBlock,
-            in_channels=channels,
-            channels=channels * 2,
-            num_blocks=num_stem_blocks,
-            stride=2)
+        self.stem =  self._make_stem_layer(in_channels, channels, num_stem_blocks)
+        
         self.relu = nn.ReLU()
 
-        # I Branch
-        self.i_branch_layers = nn.ModuleList()
+        # Backbone stages
+        self.stages = nn.ModuleList()
+        self.stages.append(
+            self._make_layer(
+                block=BasicBlock,
+                in_channels=channels,
+                channels=channels*2,
+                num_blocks=num_stem_blocks,
+                stride=2))
+
         for i in range(3):
-            self.i_branch_layers.append(
+            self.stages.append(
                 self._make_layer(
                     block=BasicBlock if i < 2 else Bottleneck,
                     in_channels=channels * 2**(i + 1),
@@ -136,10 +99,6 @@ class SEBNet(BaseBackbone):
 
         layers.append(
             self._make_layer(BasicBlock, channels, channels, num_blocks))
-        layers.append(nn.ReLU())
-        layers.append(
-            self._make_layer(
-                BasicBlock, channels, channels * 2, num_blocks, stride=2))
         layers.append(nn.ReLU())
 
         return nn.Sequential(*layers)
@@ -242,83 +201,21 @@ class SEBNet(BaseBackbone):
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
         """
-        w_out = x.shape[-1] // 8
-        h_out = x.shape[-2] // 8
 
         # stage 0
-        x = self.conv1(x) # (N, C=64, H/4, W/4)
+        x = self.stem(x) # (N, C=64, H/4, W/4)
 
         # stage 1
-        x_1 = self.relu(self.stage_1(x)) # (N, C=64, H/4, W/4)
+        x_1 = self.relu(self.stages[0](x)) # (N, C=128, H/8, W/8)
 
         # stage 2
-        x_2 = self.relu(self.stage_2(x_1)) # (N, C=128, H/8, W/8)
+        x_2 = self.relu(self.stages[1](x_1)) # (N, C=256, H/16, W/16)
 
         # stage 3
-        x_3 = self.relu(self.i_branch_layers[0](x_2)) # (N, C=256, H/16, W/16)
+        x_3 = self.relu(self.stages[2](x_2)) # (N, C=512, H/32, W/32)
 
         # stage 4
-        x_4 = self.relu(self.i_branch_layers[1](x_3)) # (N, C=512, H/32, W/32)
+        x_4 = self.relu(self.stages[3](x_3)) # (N, C=1024, H/64, W/64)
 
-        # stage 5
-        x_5 = self.i_branch_layers[2](x_4) # (N, C=1024, H/64, W/64)
-
-        return x_5
+        return x_4
     
-    def loss(self, feats: Tuple[torch.Tensor], data_samples: List[DataSample],
-             **kwargs) -> dict:
-        """Calculate losses from the classification score.
-
-        Args:
-            feats (tuple[Tensor]): The features extracted from the backbone.
-                Multiple stage inputs are acceptable but only the last stage
-                will be used to classify. The shape of every item should be
-                ``(num_samples, num_classes)``.
-            data_samples (List[DataSample]): The annotation data of
-                every samples.
-            **kwargs: Other keyword arguments to forward the loss module.
-
-        Returns:
-            dict[str, Tensor]: a dictionary of loss components
-        """
-        # The part can be traced by torch.fx
-        out = self(feats)
-        _, out_features = out
-
-        # The part can not be traced by torch.fx
-        losses = self._get_loss(out_features, **kwargs)
-        return losses
-
-    def _get_loss(self, out_features: torch.Tensor, **kwargs):
-        """Unpack data samples and compute loss."""
-        # Collapse spatial dimensions
-
-        # compute loss
-        losses = dict()
-        loss = self.loss_module(out_features, **kwargs)
-        print(f"loss: {loss}")
-        import sys
-        sys.exit()
-        losses['loss'] = loss
-
-        return losses
-        '''
-        x_spp = self.spp(x_5) # performs adaptive avg pooling at several scaled kernels: {5, 9, 17}
-        x_out = F.interpolate( # (N, 256, H/8, W/8)
-            x_spp,
-            size=[h_out, w_out],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        
-        if self.training: # self.training is inherent to MMSeg configurations throughout BaseModule and BaseDecodeHead objects.
-            if config.ABLATION == 0:
-                return x_out
-            elif config.ABLATION == 1 or config.ABLATION == 2 or config.ABLATION == 4: # PI Model (1), ID Model (2), PID Model (4)
-                return (x_2, x_3, x_4, x_out)
-            else: # I SBD Model (3), PI SBD Model (5), ID SBD Model (6), PID SBD Model (7)
-                return (x_1, x_2, x_3, x_4, x_5, x_out)
-        else:
-            return x_out
-        '''
-
-

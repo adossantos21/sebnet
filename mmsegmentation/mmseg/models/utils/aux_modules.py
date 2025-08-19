@@ -216,17 +216,21 @@ class DModule(CustomBaseModule):
 class CASENet(CustomBaseModule):
     '''
     Model layers for the CASENet SBD module.
+    Slight change to the CASENet architecture:
+        CASENet doesn't normally normalize after side convolutions; however,
+        they were added to prevent vanishing gradients during multi-task
+        training.
     '''
     def __init__(self, nclass, norm_layer=nn.BatchNorm2d, **kwargs):
         super(CASENet, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
 
         self.side1 = nn.Conv2d(64, 1, 1)
-        self.side2 = nn.Sequential(nn.Conv2d(256, 1, 1, bias=True),
+        self.side2 = nn.Sequential(nn.Conv2d(128, 1, 1, bias=True),
                                    nn.ConvTranspose2d(1, 1, 4, stride=2, padding=1, bias=False))
-        self.side3 = nn.Sequential(nn.Conv2d(512, 1, 1, bias=True),
+        self.side3 = nn.Sequential(nn.Conv2d(256, 1, 1, bias=True),
                                    nn.ConvTranspose2d(1, 1, 8, stride=4, padding=2, bias=False))
         self.side5 = nn.Sequential(nn.Conv2d(1024, nclass, 1, bias=True), # originally, 1024 was 2048; changed due to PIDNet architecture
-                                   nn.ConvTranspose2d(nclass, nclass, 16, stride=8, padding=4, bias=False))
+                                   nn.ConvTranspose2d(nclass, nclass, 32, stride=16, padding=8, bias=False))
         self.fuse = nn.Conv2d(nclass*4, nclass, 1, groups=nclass, bias=True)
 
     def forward(self, x):

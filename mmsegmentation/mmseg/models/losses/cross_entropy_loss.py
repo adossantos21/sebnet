@@ -48,6 +48,13 @@ def cross_entropy(pred,
         weight=class_weight,
         reduction='none',
         ignore_index=ignore_index)
+    
+    #print(f"class_weight: {class_weight.cpu().detach()}")
+    #print(f"label shape: {label.shape}")
+    #print(f"label unique: {torch.unique(label)}")
+    #print(f"label_weights: {torch.stack([class_weight.cpu().detach()[cls] for cls in label.cpu().detach()])}")
+    #import sys
+    #sys.exit()
 
     # apply weights and do the reduction
     # average loss over non-ignored elements
@@ -63,11 +70,16 @@ def cross_entropy(pred,
 
         else:
             # the average factor should take the class weights into account
-            label_weights = torch.stack([class_weight[cls] for cls in label
-                                         ]).to(device=class_weight.device)
-
-            if avg_non_ignore:
-                label_weights[label == ignore_index] = 0
+            flat_label = label.view(-1)
+            label_weights = torch.zeros(
+                flat_label.numel(),
+                dtype=class_weight.dtype,
+                device=class_weight.device)
+            valid_mask = (flat_label != ignore_index)
+            if valid_mask.any():
+                label_weights[valid_mask] = class_weight[flat_label[valid_mask]]
+            if not avg_non_ignore:
+                label_weights[~valid_mask] = 1.0
             avg_factor = label_weights.sum()
 
     if weight is not None:

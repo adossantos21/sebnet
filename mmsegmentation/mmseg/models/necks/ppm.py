@@ -130,8 +130,21 @@ class DAPPM(BaseModule):
             tuple[Tensor]: The last element should be the backbone's
             output processed by this neck module.
         '''
+    
+        if isinstance(x, torch.Tensor):
+            x = [x]
+        elif isinstance(x, list):
+            if not all(isinstance(item, torch.Tensor) for item in x):
+                raise TypeError("All elements in the list must be of type torch.Tensor")
+        else:
+            raise TypeError(f"x should be of type List or torch.Tensor; instead, it is {type(x)}.")
         inputs = x[-1]
         feats = []
+        #print(f"type(inputs): {type(inputs)}")
+        #print(f"len(inputs): {len(inputs)}")
+        #print(f"type(inputs[-1]): {type(inputs[-1])}")
+        #import sys
+        #sys.exit()
         feats.append(self.scales[0](inputs))
 
         for i in range(1, self.num_scales):
@@ -143,7 +156,7 @@ class DAPPM(BaseModule):
 
         out = self.compression(torch.cat(feats,
                                          dim=1)) + self.shortcut(inputs)
-        x[-1] = out
+        x.append(out)
         
         return tuple(x)
 
@@ -208,6 +221,7 @@ class PAPPM(DAPPM):
             tuple[Tensor]: The last element should be the backbone's
             output processed by this neck module.
         '''
+        x = [x]
         inputs = x[-1]
         x_ = self.scales[0](inputs)
         feats = []

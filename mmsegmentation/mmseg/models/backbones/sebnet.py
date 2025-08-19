@@ -10,7 +10,6 @@ from torch import Tensor
 from mmcv.cnn import ConvModule
 from .base_backbone import BaseBackbone
 from mmseg.registry import MODELS
-from mmseg.structures import DataSample
 from mmengine.runner import CheckpointLoader
 #from mmseg.utils import OptConfigType
 from mmseg.models.utils import BasicBlock, Bottleneck

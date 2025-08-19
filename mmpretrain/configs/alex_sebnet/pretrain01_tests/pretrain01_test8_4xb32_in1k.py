@@ -1,7 +1,7 @@
-# Pre-training without KoLeo Regularization
+# Pre-training with KoLeo Regularization
 
 _base_ = [
-    '../../_base_/models/sebnet_neck.py',
+    '../../_base_/models/sebnet_test8.py',
     '../../_base_/datasets/imagenet_bs32.py',
     '../../_base_/default_runtime.py'
 ]
@@ -71,7 +71,7 @@ param_scheduler = dict(
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
+train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_begin=0, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict()
 # Use the default test loop settings.

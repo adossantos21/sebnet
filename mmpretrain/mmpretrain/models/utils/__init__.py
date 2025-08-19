@@ -32,6 +32,7 @@ from .sparse_modules import (SparseAvgPooling, SparseBatchNorm2d, SparseConv2d,
                              SparseSyncBatchNorm2d)
 from .swiglu_ffn import SwiGLUFFN, SwiGLUFFNFused
 from .vector_quantizer import NormEMAVectorQuantizer
+from .convnext_block import ConvNeXtBlock
 
 __all__ = [
     'AdaptiveBottleneck',
@@ -39,6 +40,7 @@ __all__ = [
     'Bottleneck',
     'BottleneckExp2',
     'channel_shuffle',
+    'ConvNeXtBlock',
     'DAPPM',
     'PAPPM',
     'make_divisible',

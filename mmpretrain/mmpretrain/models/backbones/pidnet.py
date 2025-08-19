@@ -527,7 +527,6 @@ class PIDNet(BaseModule):
         """
         w_out = x.shape[-1] // 8
         h_out = x.shape[-2] // 8
-
         # stage 0-2
         x = self.stem(x)
 
@@ -535,7 +534,6 @@ class PIDNet(BaseModule):
         x_i = self.relu(self.i_branch_layers[0](x))
         x_p = self.p_branch_layers[0](x)
         x_d = self.d_branch_layers[0](x)
-
         comp_i = self.compression_1(x_i)
         x_p = self.pag_1(x_p, comp_i)
         diff_i = self.diff_1(x_i)
@@ -551,7 +549,6 @@ class PIDNet(BaseModule):
         x_i = self.relu(self.i_branch_layers[1](x_i))
         x_p = self.p_branch_layers[1](self.relu(x_p))
         x_d = self.d_branch_layers[1](self.relu(x_d))
-
         comp_i = self.compression_2(x_i)
         x_p = self.pag_2(x_p, comp_i)
         diff_i = self.diff_2(x_i)
@@ -567,17 +564,10 @@ class PIDNet(BaseModule):
         x_i = self.i_branch_layers[2](x_i)
         x_p = self.p_branch_layers[2](self.relu(x_p))
         x_d = self.d_branch_layers[2](self.relu(x_d))
+
         out = x_i
         return out
     
-        x_i = self.spp(x_i)
-        x_i = F.interpolate(
-            x_i,
-            size=[h_out, w_out],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        out = self.dfm(x_p, x_i, x_d)
-        return (temp_p, out, temp_d) if self.training else out
     
     def train(self, mode=True):
         """Override train method to maintain frozen backbone state."""
