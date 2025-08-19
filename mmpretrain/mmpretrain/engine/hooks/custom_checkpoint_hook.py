@@ -5,7 +5,7 @@ from mmengine.hooks import CheckpointHook
 from mmengine.registry import HOOKS
 from mmengine.fileio import FileClient, get_file_backend
 from mmengine.dist import is_main_process
-
+from math import inf
 
 '''
 Using custom checkpoint hook to change the checkpoint save path from
@@ -135,3 +135,81 @@ class CustomCheckpointHook(CheckpointHook):
         save_file = osp.join(runner._log_dir, 'checkpoints', 'last_checkpoint')
         with open(save_file, 'w') as f:
             f.write(self.last_ckpt)  # type: ignore
+
+    def _save_best_checkpoint(self, runner, metrics):
+        """Save the best checkpoint with a fixed filename, overwriting previous."""
+        if not is_main_process():
+            return
+
+        best_ckpt_updated = False
+
+        for key_indicator, rule in zip(self.key_indicators, self.rules):
+            key_score = metrics.get(key_indicator, None)
+            if key_score is None:
+                runner.logger.warning(f'The key "{key_indicator}" is not found in metrics, skip save best checkpoint for it.')
+                continue
+
+            best_score_key = f'best_score_{key_indicator}' if len(self.key_indicators) > 1 else 'best_score'
+
+            if best_score_key not in runner.message_hub.runtime_info:
+                best_score = self.init_value_map[rule]
+                runner.message_hub.update_info(best_score_key, best_score)
+            else:
+                best_score = runner.message_hub.get_info(best_score_key)
+
+            if not self.is_better_than[key_indicator](key_score, best_score):
+                continue
+
+            best_ckpt_updated = True
+
+            runner.message_hub.update_info(best_score_key, key_score)
+
+            ckpt_filename = f'best_{key_indicator}.pth'
+            ckpt_path = self.file_backend.join_path(self.out_dir, ckpt_filename)
+
+            # Remove previous best checkpoint if it exists
+            if self.file_backend.exists(ckpt_path):
+                is_removed = False
+                if self.file_backend.isfile(ckpt_path):
+                    self.file_backend.remove(ckpt_path)
+                    is_removed = True
+                elif self.file_backend.isdir(ckpt_path):
+                    self.file_backend.rmtree(ckpt_path)
+                    is_removed = True
+                if is_removed:
+                    runner.logger.info(
+                        f'The previous best checkpoint {ckpt_path} is removed')
+
+            meta = dict(epoch=runner.epoch, iter=runner.iter)
+
+            runner.save_checkpoint(
+                self.out_dir,
+                filename=ckpt_filename,
+                file_client_args=self.file_client_args,
+                save_optimizer=False,
+                save_param_scheduler=False,
+                meta=meta,
+                by_epoch=False,
+                backend_args=self.backend_args,
+                **self.args
+            )
+
+            if len(self.key_indicators) == 1:
+                self.best_ckpt_path = ckpt_path
+                runner.message_hub.update_info('best_ckpt', self.best_ckpt_path)
+            else:
+                self.best_ckpt_path_dict[key_indicator] = ckpt_path
+                runner.message_hub.update_info(f'best_ckpt_{key_indicator}', self.best_ckpt_path_dict[key_indicator])
+
+            runner.logger.info(
+                f'Now best checkpoint for {key_indicator} is saved as {ckpt_filename} '
+                f'with {key_indicator} = {key_score:.4f}.'
+            )
+
+        if best_ckpt_updated and self.last_ckpt is not None:
+            if self.by_epoch:
+                step = runner.epoch + 1
+            else:
+                step = runner.iter + 1
+            meta = dict(epoch=runner.epoch, iter=runner.iter)
+            self._save_checkpoint_with_step(runner, step, meta)

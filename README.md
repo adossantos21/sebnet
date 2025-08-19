@@ -25,7 +25,7 @@ Next, a decoder is attached for the downstream semantic segmentation task. A bas
 10. **Ablation 10** - Baseline + P Head + D Head + SBD Head (PIDNet + SBD)
 
 ## Results
-Results are pending. The target date for results is June 31st, 2025. Model weights for the best performing networks will be uploaded following experimentation.
+Results are pending. The target date for segmentation results is September 15th, 2025. The target date for boundary results is October 15th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
 
 ## References
 <a id="1">[1]</a> 
