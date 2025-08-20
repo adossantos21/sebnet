@@ -10,7 +10,7 @@ from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
 from typing import List, Tuple, Optional
-from mmseg.utils import OptConfigType, ConfigType, SampleList
+from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 from mmcv.cnn import ConvModule, build_activation_layer, build_norm_layer
