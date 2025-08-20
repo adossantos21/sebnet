@@ -1,12 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
-import warnings
 from typing import Optional, Sequence, List
 
 from mmengine.hooks import Hook
 from mmengine.runner import Runner
-from mmengine.visualization import Visualizer
 
 from mmseg.registry import HOOKS
 from mmseg.structures import SegDataSample
@@ -57,25 +55,10 @@ class FeatureMapVisualizationHook(Hook):
             outputs (Sequence[:obj:`SegDataSample`]]): A batch of data samples
                 that contain annotations and predictions.
         """
-        import sys
         for idx in range(runner.train_dataloader.batch_size):
             img_path = data_batch['data_samples'][idx].img_path
             if img_path == self.img_name:
                 self.save_feature_maps(runner, img_path, logits, idx)
-                print(f"Found feature map and saved it successfully")
-                sys.exit()
-        
-        #print(f"outputs: {outputs}")
-        #print(f"logits.keys(): {logits.keys()}")
-        #print(f"data_batch: {data_batch.keys()}")
-        #print(f"data_batch: {data_batch}")
-        #import sys
-        #sys.exit()
-        #if self.every_n_train_iters(runner, self.interval):
-        #    self.save_feature_maps(runner, data_batch, logits)
-        
-        #if self.initial_maps==True and runner.iter==50:
-        #    self.save_feature_maps(runner, outputs, logits)
 
     def save_feature_maps(self, runner: Runner, img_path: str, logits: List[torch.Tensor], idx: int):
         # Determine save directory
@@ -98,17 +81,9 @@ class FeatureMapVisualizationHook(Hook):
                 save_dir, 
                 f'Iter_{runner.iter}_{k}_{img_name}_featuremap{ext}'
             )
-
-            # Extract raw, unnormalized logits from first data
-            # logits = outputs[0].seg_logits.get(key='data') # these are the prediction logits for validation
-            #print(f"key {k} value type: {type(v)}")
-            #print(f"key {k} value length: {len(v)}")
-            #print(f"idx: {idx}")
-            #print(f"key {k} value[idx] shape: {v[idx].shape}")
+            # Extract raw, unnormalized logits and average across channels
             viz_fmap = torch.mean(v[idx], dim=0).cpu().detach().numpy()
             plt.imsave(save_path, viz_fmap, cmap='jet')
             runner.logger.info(
                 f'{k} Feature maps saved to {save_path} at iteration {runner.iter}'
             )
-            #import sys
-            #sys.exit()

@@ -120,7 +120,7 @@ default_hooks = dict(
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
         type='CheckpointHook', by_epoch=False, save_begin=120001,
-        interval=val_interval, save_best=['mAcc', 'mIoU'], rule='greater'),
+        interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
 
@@ -131,6 +131,8 @@ custom_hooks = [
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
+    dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=-1, 
+         save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
         img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
@@ -138,8 +140,6 @@ custom_hooks = [
         out_dir=None,
         priority='HIGHEST'
     ),
-    dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=val_interval, 
-         save_best=['mAcc', 'mIoU'], rule='greater', priority='VERY_LOW')
 ]
 
 randomness = dict(seed=304)

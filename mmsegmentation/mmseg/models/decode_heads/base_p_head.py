@@ -1,10 +1,20 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 from mmseg.models.utils import PModule, PIFusion
+import torch
 import torch.nn as nn
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import resize
 
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
+
+from typing import List, Tuple, Optional
+from mmseg.utils import OptConfigType, ConfigType, SampleList
+from torch import Tensor
+
+from mmcv.cnn import ConvModule, build_activation_layer, build_norm_layer
+from mmengine.model import BaseModule
 
 @MODELS.register_module()
 class BaselinePHead(BaseDecodeHead):
@@ -53,3 +63,35 @@ class BaselinePHead(BaseDecodeHead):
             feats = self.fusion(x_p, x[3])
             output = self.seg_head(feats)
             return output
+        
+    def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tensor:
+        gt_semantic_segs = [
+            data_sample.gt_sem_seg.data for data_sample in batch_data_samples
+        ]
+        return torch.stack(gt_semantic_segs, dim=0)
+
+    def loss_by_feat(self, logits: List[Tensor],
+                     batch_data_samples: SampleList) -> dict:
+        seg_logits, p_logits = logits
+        sem_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits = resize(
+            input=seg_logits,
+            size=sem_label.shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        p_logits = resize(
+            input=p_logits,
+            size=sem_label.shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        sem_label = sem_label.squeeze(1)
+        logits = dict(
+            seg_logits=seg_logits,
+            p_logits=p_logits,
+        )
+        loss = dict()
+        loss['loss_ce'] = self.loss_decode[0](seg_logits, sem_label)
+        loss['loss_p'] = self.loss_decode[1](p_logits, sem_label)
+        loss['acc_seg'] = accuracy(
+            seg_logits, sem_label, ignore_index=self.ignore_index)
+        return loss, logits

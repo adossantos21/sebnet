@@ -36,7 +36,17 @@ from .stdc_head import STDCHead
 from .uper_head import UPerHead
 from .vpd_depth_head import VPDDepthHead
 from .base_head import BaselineHead
+from .base_p_head import BaselinePHead
+from .base_d_head import BaselineDHead
 from .base_casenet_head import BaselineCASENetHead
+from .base_dff_head import BaselineDFFHead
+from .base_bem_head import BaselineBEMHead
+from .base_p_d_head import BaselinePDHead
+from .base_p_sbd_head import BaselinePSBDHead
+from .base_d_sbd_head import BaselineDSBDHead
+from .base_p_d_sbd_bas_head import BaselinePDBASHead
+from .base_p_d_sbd_head import BaselinePDSBDHead
+from .base_p_d_sbd_bas_head import BaselinePDSBDBASHead
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -47,5 +57,8 @@ __all__ = [
     'SegformerHead', 'ISAHead', 'STDCHead', 'IterativeDecodeHead',
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
-    'BaselineHead', 'BaselineCASENetHead'
+    'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
+    'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
+    'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
+    'BaselinePDSBDBASHead'
 ]

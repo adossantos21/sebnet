@@ -123,7 +123,7 @@ custom_hooks = [
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
     dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=-1, 
-         save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW')
+         save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
 ]
 
 randomness = dict(seed=304)
