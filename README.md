@@ -14,19 +14,19 @@ To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDN
 ### Stage 2 - Finetuning
 Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 9 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
 1.  **Ablation 01** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
-2.  **Ablation 02** - Baseline + P Head (from PIDNet's P Branch)
-3.  **Ablation 03** - Baseline + D Head (from PIDNet's D Branch)
-4.  **Ablation 04** - Baseline + CASENet SBD Head
-5.  **Ablation 05** - Baseline + DFF SBD Head
-6.  **Ablation 06** - Baseline + BEM SBD Head
-7.  **Ablation 07** - Baseline + MIMIR SBD Head
-7.  **Ablation 08** - Baseline + P Head + D Head
-8.  **Ablation 09** - Baseline + P Head + SBD Head
-9.  **Ablation 10** - Baseline + D Head + SBD Head
-10. **Ablation 11** - Baseline + P Head + D Head + BAS Loss (PIDNet)
-11. **Ablation 12** - Baseline + P Head + D Head + SBD Head
-12. **Ablation 13** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
-13. **Ablation 14** - Best Model + Mapillary Pre-training
+2.  **Ablation 02** - Baseline + CASENet SBD Head
+3.  **Ablation 03** - Baseline + DFF SBD Head
+4.  **Ablation 04** - Baseline + BEM SBD Head
+5.  **Ablation 05** - Baseline + MIMIR SBD Head
+6.  **Ablation 06** - Baseline + P Head (from PIDNet's P Branch)
+7.  **Ablation 07** - Baseline + D Head (from PIDNet's D Branch)
+8.  **Ablation 08** - Baseline + P Head + D Head
+9.  **Ablation 09** - Baseline + P Head + SBD Head
+10.  **Ablation 10** - Baseline + D Head + SBD Head
+11. **Ablation 11** - Baseline + P Head + D Head + BAS Loss (PIDNet)
+12. **Ablation 12** - Baseline + P Head + D Head + SBD Head
+13. **Ablation 13** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
+14. **Ablation 14** - Best Model + Mapillary Pre-training
 
 ## Results
 Results are pending. The target date for segmentation results is September 15th, 2025. The target date for boundary results is October 15th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
