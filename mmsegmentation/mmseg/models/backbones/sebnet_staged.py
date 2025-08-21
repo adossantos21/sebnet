@@ -50,7 +50,7 @@ class SEBNet_Staged(BaseBackbone):
                  num_stem_blocks: int = 2,
                  num_branch_blocks: int = 3,
                  align_corners: bool = False,
-                 norm_cfg: dict = dict(type='BN', requires_grad=True),
+                 norm_cfg: dict = dict(type='SyncBN', requires_grad=True),
                  act_cfg: dict = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):

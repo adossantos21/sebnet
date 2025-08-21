@@ -5,20 +5,70 @@ For Semantic Boundary Detection (SBD), we have the CASENet, DFF, and BGF modules
 '''
 
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import ConvModule
+from mmcv.cnn import ConvModule, build_activation_layer, build_norm_layer
 from torch import Tensor
 
-from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType
-from mmseg.models.utils import BasicBlock, Bottleneck
+from mmseg.models.utils import BasicBlock
+from mmseg.models.utils import BottleneckExp2 as Bottleneck
 from .base import CustomBaseModule
+from .convnext_block import ConvNeXtBlock
 from .fusion_modules import PagFM
 
+from mmengine.model import BaseModule
+
+class BaseSegHead(BaseModule):
+    """Base class for segmentation heads.
+
+    Args:
+        in_channels (int): Number of input channels.
+        channels (int): Number of output channels.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict or list[dict], optional): Init config dict.
+            Default: None.
+    """
+
+    def __init__(self,
+                 in_channels: int,
+                 channels: int,
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 init_cfg: OptConfigType = None):
+        super().__init__(init_cfg)
+        self.conv = ConvModule(
+            in_channels,
+            channels,
+            kernel_size=3,
+            padding=1,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            order=('norm', 'act', 'conv'))
+        _, self.norm = build_norm_layer(norm_cfg, num_features=channels)
+        self.act = build_activation_layer(act_cfg)
+
+    def forward(self, x: Tensor, cls_seg: Optional[nn.Module]) -> Tensor:
+        """Forward function.
+        Args:
+            x (Tensor): Input tensor.
+            cls_seg (nn.Module, optional): The classification head.
+
+        Returns:
+            Tensor: Output tensor.
+        """
+        x = self.conv(x)
+        x = self.norm(x)
+        x = self.act(x)
+        if cls_seg is not None:
+            x = cls_seg(x)
+        return x
 
 class PModule(CustomBaseModule):
     '''
@@ -93,13 +143,14 @@ class PModule(CustomBaseModule):
         Returns:
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
+        
         """
-        x_2, x_3, x_4, _ = x
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
 
         # stage 3
-        x_p = self.p_branch_layers[0](x_2)
+        x_p = self.p_branch_layers[0](x_1)
 
-        comp_i = self.compression_1(x_3)
+        comp_i = self.compression_1(x_2)
         x_p = self.pag_1(x_p, comp_i)
         if self.training:
             temp_p = x_p.clone() # (N, 128, H/8, W/8)
@@ -107,7 +158,7 @@ class PModule(CustomBaseModule):
         # stage 4
         x_p = self.p_branch_layers[1](self.relu(x_p))
 
-        comp_i = self.compression_2(x_4)
+        comp_i = self.compression_2(x_3)
         x_p = self.pag_2(x_p, comp_i)
 
         # stage 5
@@ -180,16 +231,27 @@ class DModule(CustomBaseModule):
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
         """
-        x_2, x_3, x_4, _ = x
+        """
+        Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        """
+        _, x_1, x_2, x_3, _, _ = x
 
-        w_out = x.shape[-1] // 8
-        h_out = x.shape[-2] // 8
+        w_out = x[1].shape[-1]
+        h_out = x[1].shape[-2]
 
 
         # stage 3
-        x_d = self.d_branch_layers[0](x_2)
+        x_d = self.d_branch_layers[0](x_1)
 
-        diff_i = self.diff_1(x_3)
+        diff_i = self.diff_1(x_2)
         x_d += F.interpolate(
             diff_i,
             size=[h_out, w_out],
@@ -199,7 +261,7 @@ class DModule(CustomBaseModule):
         # stage 4
         x_d = self.d_branch_layers[1](self.relu(x_d))
 
-        diff_i = self.diff_2(x_4)
+        diff_i = self.diff_2(x_3)
         x_d += F.interpolate(
             diff_i,
             size=[h_out, w_out],
@@ -210,8 +272,8 @@ class DModule(CustomBaseModule):
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-
-        return temp_d, x_d if self.training else x_d
+        #print(f"DModule temp_d shape: {temp_d.shape}")
+        return tuple([temp_d, x_d]) if self.training else x_d
 
 class CASENet(CustomBaseModule):
     '''
@@ -263,19 +325,19 @@ class DFF(CustomBaseModule):
         self.ada_learner = LocationAdaptiveLearner(nclass, nclass*4, nclass*4, norm_layer=norm_layer)
         self.side1 = nn.Sequential(nn.Conv2d(64, 1, 1),
                                    norm_layer(1))
-        self.side2 = nn.Sequential(nn.Conv2d(256, 1, 1, bias=True),
+        self.side2 = nn.Sequential(nn.Conv2d(128, 1, 1, bias=True),
                                    norm_layer(1),
                                    nn.ConvTranspose2d(1, 1, 4, stride=2, padding=1, bias=False))
-        self.side3 = nn.Sequential(nn.Conv2d(512, 1, 1, bias=True),
+        self.side3 = nn.Sequential(nn.Conv2d(256, 1, 1, bias=True),
                                    norm_layer(1),
                                    nn.ConvTranspose2d(1, 1, 8, stride=4, padding=2, bias=False))
         self.side5 = nn.Sequential(nn.Conv2d(1024, nclass, 1, bias=True), # originally, 1024 was 2048; changed due to PIDNet architecture
                                    norm_layer(nclass),
-                                   nn.ConvTranspose2d(nclass, nclass, 16, stride=8, padding=4, bias=False))
+                                   nn.ConvTranspose2d(nclass, nclass, 32, stride=16, padding=8, bias=False))
 
         self.side5_w = nn.Sequential(nn.Conv2d(1024, nclass*4, 1, bias=True), # originally, 1024 was 2048; changed due to PIDNet architecture
                                    norm_layer(nclass*4),
-                                   nn.ConvTranspose2d(nclass*4, nclass*4, 16, stride=8, padding=4, bias=False))
+                                   nn.ConvTranspose2d(nclass*4, nclass*4, 32, stride=16, padding=8, bias=False))
 
     def forward(self, x):
         c1, c2, c3, _, c5, _ = x
@@ -311,13 +373,13 @@ class BEM(CustomBaseModule):
 
         self.side1 = nn.Sequential(nn.Conv2d(in_channels=planes, out_channels=planes*2, kernel_size=3, stride=2, padding=1), # (N, 128, H/8, W/8)
                                     self.norm_layer(num_features=planes*2))
-        self.side2 = nn.Sequential(nn.Conv2d(in_channels=planes*2, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=1, H/8, W/8)
+        self.side2 = nn.Sequential(nn.Conv2d(in_channels=planes*2, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
                                     self.norm_layer(num_features=planes*2))
-        self.side3 = nn.Sequential(nn.Conv2d(in_channels=planes*4, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=1, H/8, W/8)
+        self.side3 = nn.Sequential(nn.Conv2d(in_channels=planes*4, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
                                     self.norm_layer(num_features=planes*2))
-        self.side5 = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=19, H/8, W/8)
+        self.side5 = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
                                     self.norm_layer(num_features=planes*2))
-        self.side5_w = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*8, kernel_size=3, padding=1, bias=True), # (N, C=19*4, H/8, W/8)
+        self.side5_w = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*8, kernel_size=3, padding=1, bias=True), # (N, C=128*4, H/8, W/8)
                                     self.norm_layer(num_features=planes*8))
 
         self.layer1 = self._make_single_layer(BasicBlock, planes * 2, planes * 2) 
@@ -376,6 +438,122 @@ class BEM(CustomBaseModule):
         outputs = [Aside5, fuse]
         
         return tuple(outputs)
+    
+class MIMIR(CustomBaseModule):
+    '''
+    Multi-scale Inverted Module for Image Refinement:
+    BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
+    Renamed MIMIR.
+    '''
+    def __init__(self, planes=64, norm_cfg=dict(type='LN2d', eps=1e-6)):
+        super().__init__()
+        self.norm_cfg = norm_cfg
+
+        # Side1: Downsampling projection + ConvNeXt block
+        self.side1_down = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes),
+            nn.Conv2d(planes, planes*2, kernel_size=3, stride=2, padding=1)
+        )
+        self.side1_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side2: Direct ConvNeXt block (same channels)
+        self.side2_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side3: Channel projection + ConvNeXt block
+        self.side3_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*4),
+            nn.Conv2d(planes*4, planes*2, kernel_size=1)
+        )
+        self.side3_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5: Channel projection + ConvNeXt block
+        self.side5_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16),
+            nn.Conv2d(planes*16, planes*2, kernel_size=1)
+        )
+        self.side5_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5_w: Channel projection + ConvNeXt block
+        self.side5_w_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16),
+            nn.Conv2d(planes*16, planes*8, kernel_size=1)
+        )
+        self.side5_w_block = ConvNeXtBlock(in_channels=planes*8, norm_cfg=self.norm_cfg)
+
+        # Replace BasicBlock with ConvNeXtBlock
+        self.layer1 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+        self.layer2 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+
+        # Adapted sep_conv with new norm
+        self.sep_conv = nn.Sequential(
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*8, kernel_size=3, padding=1, groups=planes*8, bias=True),
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*2, kernel_size=1, bias=True),
+            build_norm_layer(self.norm_cfg, planes*2)[1],  # Extract the module
+            nn.ReLU(inplace=True)
+        )
+
+        self.adaptive_learner = LocationAdaptiveLearnerLN(planes*2, planes*8, planes*8, norm_cfg=self.norm_cfg)
+
+    def forward(self, x):
+        c1, c2, c3, _, c5, _ = x
+
+        '''Stage 1'''
+        Aside1 = self.side1_block(self.side1_down(c1))  # (N, 128, H/8, W/8)
+
+        '''Stage 2'''
+        Aside2 = self.side2_block(c2)  # (N, 128, H/8, W/8)
+        Aside2 = self.layer1(Aside1 + Aside2)  # (N, 128, H/8, W/8)
+        height, width = Aside2.shape[2:]
+
+        '''Stage 3'''
+        Aside3_proj = self.side3_proj(c3)  # Project channels
+        Aside3 = self.side3_block(Aside3_proj)  # (N, 128, H/16, W/16) -> but interpolate later
+        Aside3 = F.interpolate(Aside3, size=[height, width], mode='bilinear', align_corners=False)
+        Aside3 = self.layer2(Aside3 + Aside2)  # (N, 128, H/8, W/8)
+        
+        '''Stage 5'''
+        Aside5_proj = self.side5_proj(c5)
+        Aside5 = self.side5_block(Aside5_proj)
+        Aside5 = F.interpolate(Aside5, size=[height, width], mode='bilinear', align_corners=False)
+        Aside5 = Aside3 + Aside5  # (N, 128, H/8, W/8)
+
+        Aside5_w_proj = self.side5_w_proj(c5)
+        Aside5_w = self.side5_w_block(Aside5_w_proj)
+        Aside5_w = F.interpolate(Aside5_w, size=[height, width], mode='bilinear', align_corners=False)
+        
+        '''Fuse Sides 1-3 and 5'''
+        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2)  # (N, 128, 4, H/8, W/8)
+        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1)  # (N, 512, H/8, W/8)
+        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3))  # (N, 128, 4, H/8, W/8)
+        fuse = torch.mul(edge_5d, adaptive_weights)  # (N, 128, 4, H/8, W/8)
+        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4))  # (N, 512, H/8, W/8)
+        fuse = self.sep_conv(fuse)  # (N, 128, H/8, W/8)
+
+        outputs = [Aside5, fuse]
+        
+        return tuple(outputs)
+
+class LocationAdaptiveLearnerLN(nn.Module):
+    """Adaptive weight learner with 2D Layer Normalization."""
+    def __init__(self, nclass, in_channels, out_channels, norm_cfg=dict(type='LN2d', eps=1e-6)):
+        super().__init__()
+        self.nclass = nclass
+
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, out_channels, 1, bias=True),
+                                   build_norm_layer(norm_cfg, out_channels)[1],
+                                   nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1, bias=True),
+                                   build_norm_layer(norm_cfg, out_channels)[1],
+                                   nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1, bias=True),
+                                   build_norm_layer(norm_cfg, out_channels)[1])
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(x.size(0), self.nclass, -1, x.size(2), x.size(3))
+        return x
 
 class LocationAdaptiveLearner(nn.Module):
     """docstring for LocationAdaptiveLearner"""

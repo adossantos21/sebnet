@@ -40,7 +40,7 @@ model = dict(
         out_channels=256, 
         num_scales=5),    # The type of the neck module.
     decode_head=dict(
-        type='BaselineCASENetHead',     # The type of the classification head module.
+        type='BaselineDFFHead',     # The type of the classification head module.
         # All fields except `type` come from the __init__ method of class `LinearClsHead`
         # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
         num_classes=19,

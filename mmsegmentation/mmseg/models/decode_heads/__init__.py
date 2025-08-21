@@ -44,7 +44,7 @@ from .base_bem_head import BaselineBEMHead
 from .base_p_d_head import BaselinePDHead
 from .base_p_sbd_head import BaselinePSBDHead
 from .base_d_sbd_head import BaselineDSBDHead
-from .base_p_d_sbd_bas_head import BaselinePDBASHead
+from .base_p_d_bas_head import BaselinePDBASHead
 from .base_p_d_sbd_head import BaselinePDSBDHead
 from .base_p_d_sbd_bas_head import BaselinePDSBDBASHead
 

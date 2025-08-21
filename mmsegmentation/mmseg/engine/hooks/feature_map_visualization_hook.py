@@ -76,13 +76,13 @@ class FeatureMapVisualizationHook(Hook):
         img_name, ext = osp.splitext(osp.basename(img_path))
         if self.rstrip is not None:
             img_name = img_name.rstrip(self.rstrip)
-        for k, v in logits.items():
+        for k, v in logits.items(): # assume multiple types of logits
             save_path = osp.join(
                 save_dir, 
                 f'Iter_{runner.iter}_{k}_{img_name}_featuremap{ext}'
             )
             # Extract raw, unnormalized logits and average across channels
-            viz_fmap = torch.mean(v[idx], dim=0).cpu().detach().numpy()
+            viz_fmap = torch.mean(v[idx], dim=0).cpu().detach().numpy() # assume v has shape (B, C, H, W)
             plt.imsave(save_path, viz_fmap, cmap='jet')
             runner.logger.info(
                 f'{k} Feature maps saved to {save_path} at iteration {runner.iter}'

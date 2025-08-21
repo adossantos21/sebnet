@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import PModule, PIFusion
+from mmseg.models.utils import BaseSegHead, PModule, PIFusion
 import torch
 import torch.nn as nn
 from mmseg.models.losses import accuracy
@@ -9,12 +9,9 @@ from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple, Optional
-from mmseg.utils import OptConfigType, ConfigType, SampleList
+from typing import List
+from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
-
-from mmcv.cnn import ConvModule, build_activation_layer, build_norm_layer
-from mmengine.model import BaseModule
 
 @MODELS.register_module()
 class BaselinePHead(BaseDecodeHead):
@@ -30,8 +27,19 @@ class BaselinePHead(BaseDecodeHead):
             Default: 19 for Cityscapes.
     """
 
-    def __init__(self, in_channels=256, num_classes=19, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, 
+                 in_channels=256, 
+                 num_classes=19,
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 **kwargs):
+        super().__init__(
+            in_channels,
+            in_channels,
+            num_classes=num_classes,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            **kwargs)
         assert isinstance(in_channels, int)
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
@@ -40,7 +48,7 @@ class BaselinePHead(BaseDecodeHead):
         self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg_dfm)
         if self.training:
             self.p_head = nn.Conv2d(self.in_channels // 2, self.num_classes, kernel_size=1)
-        self.seg_head = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
+        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
@@ -50,18 +58,18 @@ class BaselinePHead(BaseDecodeHead):
         x_2 has shape (N, 128, H/8, W/8)
         x_3 has shape (N, 256, H/16, W/16)
         x_4 has shape (N, 512, H/32, W/32)
-        x_out has shape (N, 256, H/8, W/8)
+        x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
             temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
             p_supervised = self.p_head(temp_p)
-            feats = self.fusion(x_p, x[3])
-            output = self.seg_head(feats)
+            feats = self.fusion(x_p, x[-1])
+            output = self.seg_head(feats, self.cls_seg)
             return tuple([output, p_supervised])
         else:
             x_p = self.p_module(x)
-            feats = self.fusion(x_p, x[3])
-            output = self.seg_head(feats)
+            feats = self.fusion(x_p, x[-1])
+            output = self.seg_head(feats, self.cls_seg)
             return output
         
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tensor:

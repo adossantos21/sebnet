@@ -1,68 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import CASENet
+from mmseg.models.utils import BaseSegHead, CASENet
 import torch
-import torch.nn as nn
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
-
-from mmcv.cnn import ConvModule, build_activation_layer, build_norm_layer
-from mmengine.model import BaseModule
-
-class BasePIDHead(BaseModule):
-    """Base class for PID head.
-
-    Args:
-        in_channels (int): Number of input channels.
-        channels (int): Number of output channels.
-        norm_cfg (dict): Config dict for normalization layer.
-            Default: dict(type='BN').
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='ReLU', inplace=True).
-        init_cfg (dict or list[dict], optional): Init config dict.
-            Default: None.
-    """
-
-    def __init__(self,
-                 in_channels: int,
-                 channels: int,
-                 norm_cfg: OptConfigType = dict(type='BN'),
-                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
-                 init_cfg: OptConfigType = None):
-        super().__init__(init_cfg)
-        self.conv = ConvModule(
-            in_channels,
-            channels,
-            kernel_size=3,
-            padding=1,
-            norm_cfg=norm_cfg,
-            act_cfg=act_cfg,
-            order=('norm', 'act', 'conv'))
-        _, self.norm = build_norm_layer(norm_cfg, num_features=channels)
-        self.act = build_activation_layer(act_cfg)
-
-    def forward(self, x: Tensor, cls_seg: Optional[nn.Module]) -> Tensor:
-        """Forward function.
-        Args:
-            x (Tensor): Input tensor.
-            cls_seg (nn.Module, optional): The classification head.
-
-        Returns:
-            Tensor: Output tensor.
-        """
-        x = self.conv(x)
-        x = self.norm(x)
-        x = self.act(x)
-        if cls_seg is not None:
-            x = cls_seg(x)
-        return x
 
 @MODELS.register_module()
 class BaselineCASENetHead(BaseDecodeHead):
@@ -97,7 +45,7 @@ class BaselineCASENetHead(BaseDecodeHead):
         self.num_classes = num_classes
         if self.training:
             self.casenet = CASENet(nclass=self.num_classes)
-        self.seg_head = BasePIDHead(in_channels, in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
@@ -109,7 +57,7 @@ class BaselineCASENetHead(BaseDecodeHead):
         x_2 has shape (N, 256, H/16, W/16)
         x_3 has shape (N, 512, H/32, W/32)
         x_4 has shape (N, 1024, H/64, W/64)
-        x_out has shape (N, 256, H/8, W/8)
+        x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
             side5, fuse = self.casenet(x) # side5: (N, C=Num_Classes, H/8, W/8), fuse: (N, C=Num_Classes, H/8, W/8)

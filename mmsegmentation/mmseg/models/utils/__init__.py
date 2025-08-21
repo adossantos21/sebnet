@@ -26,11 +26,13 @@ from .fusion_modules import (
 )
 
 from .aux_modules import (
+    BaseSegHead,
     PModule,
     DModule,
     CASENet,
     DFF,
     BEM,
+    MIMIR,
 )
 
 __all__ = [
@@ -41,5 +43,5 @@ __all__ = [
     'cross_attn_layer', 'LayerNorm2d', 'MLP', 'BottleneckExp2', 'LayerNorm2dSAN',
     'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
     "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM", "ConvNeXtBlock",
-    "GRN", "build_norm_layer",
+    "GRN", "build_norm_layer", "BaseSegHead", "MIMIR",
 ]

@@ -1,10 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import DFF
-import torch.nn as nn
+from mmseg.models.utils import BaseSegHead, DFF
+import torch
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import resize
 
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
+
+from typing import List, Tuple
+from mmseg.utils import OptConfigType, SampleList
+from torch import Tensor
 
 @MODELS.register_module()
 class BaselineDFFHead(BaseDecodeHead):
@@ -20,15 +26,26 @@ class BaselineDFFHead(BaseDecodeHead):
             Default: 19 for Cityscapes.
     """
 
-    def __init__(self, in_channels=256, num_classes=19, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, 
+                 in_channels=256, 
+                 num_classes=19, 
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 **kwargs):
+        super().__init__(
+            in_channels,
+            in_channels,
+            num_classes=num_classes,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            **kwargs)
         assert isinstance(in_channels, int)
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
         if self.training:
             self.dff = DFF(nclass=self.num_classes)
-        self.seg_head = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
+        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
@@ -44,8 +61,53 @@ class BaselineDFFHead(BaseDecodeHead):
         """
         if self.training:
             side5, fuse = self.dff(x) # side5: (N, C=Num_Classes, H/8, W/8), fuse: (N, C=Num_Classes, H/8, W/8)
-            output = self.seg_head(x[5])
+            output = self.seg_head(x[-1], self.cls_seg)
             return tuple([output, side5, fuse])
         else:
-            output = self.seg_head(x[5])
+            output = self.seg_head(x[-1], self.cls_seg)
             return output
+    
+    def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
+        gt_semantic_segs = [
+            data_sample.gt_sem_seg.data for data_sample in batch_data_samples
+        ]
+        gt_edge_segs = [
+            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+        ]
+        gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
+        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
+        return gt_sem_segs, gt_edge_segs
+
+    def loss_by_feat(self, seg_logits: List[Tensor],
+                     batch_data_samples: SampleList) -> dict:
+        output_logits, side5_logits, fuse_logits = seg_logits
+        sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        output_logits = resize(
+            input=output_logits,
+            size=sem_label.shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        side5_logits = resize(
+            input=side5_logits,
+            size=bd_multi_label.shape[3:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        fuse_logits = resize(
+            input=fuse_logits,
+            size=bd_multi_label.shape[3:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        sem_label = sem_label.squeeze(1)
+        bd_multi_label = bd_multi_label.squeeze(1)
+        logits = dict(
+            seg_logits=output_logits,
+            side5_logits=side5_logits,
+            fuse_logits=fuse_logits
+        )
+        loss = dict()
+        loss['loss_ce'] = self.loss_decode[0](output_logits, sem_label)
+        loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
+        loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
+        loss['acc_seg'] = accuracy(
+            output_logits, sem_label, ignore_index=self.ignore_index)
+        return loss, logits
