@@ -3,6 +3,7 @@
 from mmseg.models.utils import BaseSegHead, MIMIR
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 
@@ -46,8 +47,10 @@ class BaselineMIMIRHead(BaseDecodeHead):
         self.num_classes = num_classes
         if self.training:
             self.mimir = MIMIR(planes=self.in_channels // 4)
-            self.side5_head = nn.Conv2d(self.in_channels // 2, self.num_classes, kernel_size=1)
-            self.fuse_head = nn.Conv2d(self.in_channels // 2, self.num_classes, kernel_size=1)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
+            self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -60,15 +63,30 @@ class BaselineMIMIRHead(BaseDecodeHead):
         x_2 has shape (N, 256, H/16, W/16)
         x_3 has shape (N, 512, H/32, W/32)
         x_4 has shape (N, 1024, H/64, W/64)
-        x_out has shape (N, 256, H/8, W/8)
+        x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.mimir(x) # side5 and fuse (N, C=128, H/8, W/8)
-            side5 = self.side5_head(side5)
-            fuse = self.fuse_head(fuse)
-            output = self.seg_head(x[-1], self.cls_seg)
+            side5, fuse = self.mimir(x) # side5 and fuse (N, C=128, H/4, W/4)
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+            fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
+            print(f"side5 shape: {side5.shape}")
+            print(f"fuse shape: {fuse.shape}")
+            print(f"output shape: {output.shape}")
+            import sys
+            sys.exit()
             return tuple([output, side5, fuse])
         else:
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
             output = self.seg_head(x[-1], self.cls_seg)
             return output
         

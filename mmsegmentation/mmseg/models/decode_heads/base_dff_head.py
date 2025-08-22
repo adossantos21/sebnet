@@ -2,6 +2,7 @@
 
 from mmseg.models.utils import BaseSegHead, DFF
 import torch
+import torch.nn.functional as F
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 
@@ -51,22 +52,32 @@ class BaselineDFFHead(BaseDecodeHead):
         """
         Forward function.
         x should be a tuple of outputs:
-        x_1, x_2, x_3, x_4, x_5, x_out = x
-        x_1 has shape (N, 64, H/4, W/4)
-        x_2 has shape (N, 128, H/8, W/8)
-        x_3 has shape (N, 256, H/16, W/16)
-        x_4 has shape (N, 512, H/32, W/32)
-        x_5 has shape (N, 1024, H/64, W/64)
-        x_out has shape (N, 256, H/8, W/8)
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.dff(x) # side5: (N, C=Num_Classes, H/8, W/8), fuse: (N, C=Num_Classes, H/8, W/8)
-            output = self.seg_head(x[-1], self.cls_seg)
+            side5, fuse = self.dff(x) # side5: (N, K, H/4, W/4), fuse: (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, side5, fuse])
         else:
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
             output = self.seg_head(x[-1], self.cls_seg)
             return output
-    
+
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples

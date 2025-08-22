@@ -66,13 +66,21 @@ class SEBNet_Staged(BaseBackbone):
 
         # Backbone stages
         self.stages = nn.ModuleList()
-        for i in range(4):
+        self.stages.append(
+            self._make_layer(
+                block=BasicBlock,
+                in_channels=channels,
+                channels=channels*2,
+                num_blocks=num_stem_blocks,
+                stride=2))
+
+        for i in range(3):
             self.stages.append(
                 self._make_layer(
-                    block=BasicBlock if i < 3 else Bottleneck,
-                    in_channels=channels * 2**i,
-                    channels=channels * 2**(i + 1) if i < 3 else channels * 2**i,
-                    num_blocks=num_branch_blocks if i < 3 else 2,
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2**(i + 1),
+                    channels=channels * 8 if i > 0 else channels * 4,
+                    num_blocks=num_branch_blocks if i < 2 else 2,
                     stride=2))
         
     def _make_stem_layer(self, in_channels: int, channels: int,

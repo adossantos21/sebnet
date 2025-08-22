@@ -2,6 +2,8 @@
 
 from mmseg.models.utils import BaseSegHead, CASENet
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 
@@ -60,13 +62,23 @@ class BaselineCASENetHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.casenet(x) # side5: (N, C=Num_Classes, H/8, W/8), fuse: (N, C=Num_Classes, H/8, W/8)
+            side5, fuse = self.casenet(x) # side5: (N, C=Num_Classes, H/4, W/4), fuse: (N, C=Num_Classes, H/4, W/4)
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
             output = self.seg_head(x[-1], self.cls_seg)
-            return [output, side5, fuse]
+            return tuple([output, side5, fuse])
         else:
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
             output = self.seg_head(x[-1], self.cls_seg)
             return output
-        
+
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples

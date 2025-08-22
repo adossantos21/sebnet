@@ -275,6 +275,54 @@ class DModule(CustomBaseModule):
         #print(f"DModule temp_d shape: {temp_d.shape}")
         return tuple([temp_d, x_d]) if self.training else x_d
 
+class CASENetLikePIDNetDBranch(CustomBaseModule):
+    '''
+    Model layers for the CASENet SBD module.
+    Slight change to the CASENet architecture:
+        CASENet doesn't normally normalize after side convolutions; however,
+        they were added to prevent vanishing gradients during multi-task
+        training.
+    '''
+    def __init__(self, nclass, norm_layer=nn.BatchNorm2d, **kwargs):
+        super(CASENet, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
+
+        self.side1 = nn.Conv2d(64, 1, 1, stride=2, bias=True)
+        self.side2 = nn.Conv2d(128, 1, 1, bias=True)
+        self.side3 = nn.Sequential(nn.Conv2d(256, 1, 1, bias=True),
+                                   nn.ConvTranspose2d(1, 1, 4, stride=2, padding=1, bias=False))
+        self.side5 = nn.Sequential(nn.Conv2d(1024, nclass, 1, bias=True), # originally, 1024 was 2048; changed due to PIDNet architecture
+                                   nn.ConvTranspose2d(nclass, nclass, 16, stride=8, padding=4, bias=False))
+        self.fuse = nn.Conv2d(nclass*4, nclass, 1, groups=nclass, bias=True)
+
+    def forward(self, x):
+        '''
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        '''
+        c1, c2, c3, _, c5, _ = x
+
+        side1 = self.side1(c1) # (N, 1, H/8, W/8)
+        side2 = self.side2(c2) # (N, 1, H/8, W/8)
+        side3 = self.side3(c3) # (N, 1, H/8, W/8)
+        side5 = self.side5(c5) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+        slice5 = side5[:,0:1,:,:]
+        fuse = torch.cat((slice5, side1, side2, side3), 1)
+        for i in range(side5.size(1)-1):
+            slice5 = side5[:,i+1:i+2,:,:]
+            fuse = torch.cat((fuse, slice5, side1, side2, side3), 1)
+
+        fuse = self.fuse(fuse)
+
+        outputs = [side5, fuse]
+
+        return tuple(outputs)
+
 class CASENet(CustomBaseModule):
     '''
     Model layers for the CASENet SBD module.
@@ -296,12 +344,22 @@ class CASENet(CustomBaseModule):
         self.fuse = nn.Conv2d(nclass*4, nclass, 1, groups=nclass, bias=True)
 
     def forward(self, x):
+        '''
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        '''
         c1, c2, c3, _, c5, _ = x
 
-        side1 = self.side1(c1)
-        side2 = self.side2(c2)
-        side3 = self.side3(c3)
-        side5 = self.side5(c5)
+        side1 = self.side1(c1) # (N, 1, H/4, W/4)
+        side2 = self.side2(c2) # (N, 1, H/4, W/4)
+        side3 = self.side3(c3) # (N, 1, H/4, W/4)
+        side5 = self.side5(c5) # (N, K, H/4, W/4), where K is the number of classes in the labeled
 
         slice5 = side5[:,0:1,:,:]
         fuse = torch.cat((slice5, side1, side2, side3), 1)
@@ -340,24 +398,34 @@ class DFF(CustomBaseModule):
                                    nn.ConvTranspose2d(nclass*4, nclass*4, 32, stride=16, padding=8, bias=False))
 
     def forward(self, x):
+        '''
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        '''
         c1, c2, c3, _, c5, _ = x
-        side1 = self.side1(c1) # (N, 1, H, W)
-        side2 = self.side2(c2) # (N, 1, H, W)
-        side3 = self.side3(c3) # (N, 1, H, W)
-        side5 = self.side5(c5) # (N, 19, H, W)
-        side5_w = self.side5_w(c5) # (N, 19*4, H, W)
+        side1 = self.side1(c1) # (N, 1, H/4, W/4)
+        side2 = self.side2(c2) # (N, 1, H/4, W/4)
+        side3 = self.side3(c3) # (N, 1, H/4, W/4)
+        side5 = self.side5(c5) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+        side5_w = self.side5_w(c5) # (N, K*4, H/4, W/4)
         
-        ada_weights = self.ada_learner(side5_w) # (N, 19, 4, H, W)
+        ada_weights = self.ada_learner(side5_w) # (N, K, 4, H/4, W/4)
 
-        slice5 = side5[:,0:1,:,:] # (N, 1, H, W)
+        slice5 = side5[:,0:1,:,:] # (N, 1, H/4, W/4)
         fuse = torch.cat((slice5, side1, side2, side3), 1)
         for i in range(side5.size(1)-1):
-            slice5 = side5[:,i+1:i+2,:,:] # (N, 1, H, W)
-            fuse = torch.cat((fuse, slice5, side1, side2, side3), 1) # (N, 19*4, H, W)
+            slice5 = side5[:,i+1:i+2,:,:] # (N, 1, H/4, W/4)
+            fuse = torch.cat((fuse, slice5, side1, side2, side3), 1) # (N, K*4, H/4, W/4)
 
-        fuse = fuse.view(fuse.size(0), self.nclass, -1, fuse.size(2), fuse.size(3)) # (N, 19, 4, H, W)
-        fuse = torch.mul(fuse, ada_weights) # (N, 19, 4, H, W)
-        fuse = torch.sum(fuse, 2) # (N, 19, H, W)
+        fuse = fuse.view(fuse.size(0), self.nclass, -1, fuse.size(2), fuse.size(3)) # (N, K, 4, H/4, W/4)
+        fuse = torch.mul(fuse, ada_weights) # (N, K, 4, H/4, W/4)
+        fuse = torch.sum(fuse, 2) # (N, K, H/4, W/4)
 
         outputs = [side5, fuse]
 
@@ -368,18 +436,19 @@ class BEM(CustomBaseModule):
     '''
     Model layers for DCBNetv1's SBD module, Boundary Extraction Module (BEM).
     '''
-    def __init__(self, planes=64, norm_layer=nn.BatchNorm2d):
+    def __init__(self, planes=64, norm_layer=nn.BatchNorm2d, **kwargs):
+        super(BEM, self).__init__(planes, norm_layer=norm_layer, **kwargs)
         self.norm_layer = norm_layer
 
-        self.side1 = nn.Sequential(nn.Conv2d(in_channels=planes, out_channels=planes*2, kernel_size=3, stride=2, padding=1), # (N, 128, H/8, W/8)
+        self.side1 = nn.Sequential(nn.Conv2d(in_channels=planes, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, 128, H/4, W/4)
                                     self.norm_layer(num_features=planes*2))
-        self.side2 = nn.Sequential(nn.Conv2d(in_channels=planes*2, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
+        self.side2 = nn.Sequential(nn.Conv2d(in_channels=planes*2, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/4, W/4)
                                     self.norm_layer(num_features=planes*2))
-        self.side3 = nn.Sequential(nn.Conv2d(in_channels=planes*4, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
+        self.side3 = nn.Sequential(nn.Conv2d(in_channels=planes*4, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/4, W/4)
                                     self.norm_layer(num_features=planes*2))
-        self.side5 = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/8, W/8)
+        self.side5 = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, C=128, H/4, W/4)
                                     self.norm_layer(num_features=planes*2))
-        self.side5_w = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*8, kernel_size=3, padding=1, bias=True), # (N, C=128*4, H/8, W/8)
+        self.side5_w = nn.Sequential(nn.Conv2d(in_channels=planes*16, out_channels=planes*8, kernel_size=3, padding=1, bias=True), # (N, C=128*4, H/4, W/4)
                                     self.norm_layer(num_features=planes*8))
 
         self.layer1 = self._make_single_layer(BasicBlock, planes * 2, planes * 2) 
@@ -397,43 +466,48 @@ class BEM(CustomBaseModule):
 
     def forward(self, x):
         '''
-        c1 has shape (N, 64, H/4, W/4)
-        c2 has shape (N, 128, H/8, W/8)
-        c3 has shape (N, 256, H/16, W/16)
-        c4 has shape (N, 512, H/32, W/32)
-        c5 has shape (N, 1024, H/64, W/64)
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
         '''
         c1, c2, c3, _, c5, _ = x
         '''Stage 1'''
-        Aside1 = self.side1(c1) # (N, 128, H/8, W/8), may need to clone input
+        Aside1 = self.side1(c1) # (N, 128, H/4, W/4), may need to clone input
+        height, width = Aside1.shape[2:]
 
         '''Stage 2'''
-        Aside2 = self.side2(c2) # (N, 128, H/8, W/8)
-        Aside2 = self.layer1(Aside1 + Aside2) # (N, 128, H/8, W/8)
-        height, width = Aside2.shape[2:]
-
-        '''Stage 3'''
-        Aside3 = F.interpolate(self.side3(c3), # (N, 128, H/8, W/8)
+        Aside2 = F.interpolate(self.side2(c2), # (N, 128, H/4, W/4)
                                size=[height, width],
                                mode='bilinear', align_corners=False)
-        Aside3 = self.layer2(Aside3 + Aside2) # (N, 128, H/8, W/8)
+        Aside2 = self.layer1(Aside1 + Aside2) # (N, 128, H/4, W/4)
+        
+        '''Stage 3'''
+        Aside3 = F.interpolate(self.side3(c3), # (N, 128, H/4, W/4)
+                               size=[height, width],
+                               mode='bilinear', align_corners=False)
+        Aside3 = self.layer2(Aside3 + Aside2) # (N, 128, H/4, W/4)
         
         '''Stage 5'''
-        Aside5 = Aside3 + F.interpolate(self.side5(c5), # (N, 128, H/8, W/8)
+        Aside5 = Aside3 + F.interpolate(self.side5(c5), # (N, 128, H/4, W/4)
                                         size=[height, width],
                                         mode='bilinear', align_corners=False)
 
-        Aside5_w = F.interpolate(self.side5_w(c5), # (N, 512, H/8, W/8)
+        Aside5_w = F.interpolate(self.side5_w(c5), # (N, 512, H/4, W/4)
                         size=[height, width],
                         mode='bilinear', align_corners=False)
         
         '''Fuse Sides 1-3 and 5'''
-        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2) # (N, 128, 4, H/8, W/8), softmax forces learned weights of each Aside to be mutually exclusive along the fusion dimension.
-        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1) # (N, 512, H/8, W/8)
-        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3)) # (N, 128, 4, H/8, W/8)
-        fuse = torch.mul(edge_5d, adaptive_weights) # (N, 128, 4, H/8, W/8)
-        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4)) # (N, 512, H/8, W/8)
-        fuse = self.sep_conv(fuse) # (N, 128, H/8, W/8)
+        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2) # (N, 128, 4, H/4, W/4), softmax forces learned weights of each Aside to be mutually exclusive along the fusion dimension.
+        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1) # (N, 512, H/4, W/4)
+        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3)) # (N, 128, 4, H/4, W/4)
+        fuse = torch.mul(edge_5d, adaptive_weights) # (N, 128, 4, H/4, W/4)
+        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4)) # (N, 512, H/4, W/4)
+        fuse = self.sep_conv(fuse) # (N, 128, H/4, W/4)
 
         outputs = [Aside5, fuse]
         
@@ -445,8 +519,115 @@ class MIMIR(CustomBaseModule):
     BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
     Renamed MIMIR.
     '''
-    def __init__(self, planes=64, norm_cfg=dict(type='LN2d', eps=1e-6)):
+    def __init__(self, planes=64, norm_cfg=dict(type='mmpretrain.LN2d', eps=1e-6), **kwargs):
         super().__init__()
+        self.norm_cfg = norm_cfg
+
+        # Side1: Channel projection + ConvNeXt block
+        self.side1_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes)[1],
+            nn.Conv2d(planes, planes*2, kernel_size=1)
+        )
+        self.side1_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side2: Direct ConvNeXt block (same channels)
+        self.side2_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side3: Channel projection + ConvNeXt block
+        self.side3_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*4)[1],
+            nn.Conv2d(planes*4, planes*2, kernel_size=1)
+        )
+        self.side3_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5: Channel projection + ConvNeXt block
+        self.side5_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16)[1],
+            nn.Conv2d(planes*16, planes*2, kernel_size=1)
+        )
+        self.side5_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5_w: Channel projection + ConvNeXt block
+        self.side5_w_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16)[1],
+            nn.Conv2d(planes*16, planes*8, kernel_size=1)
+        )
+        self.side5_w_block = ConvNeXtBlock(in_channels=planes*8, norm_cfg=self.norm_cfg)
+
+        # Replace BasicBlock with ConvNeXtBlock
+        self.layer1 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+        self.layer2 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+
+        # Adapted sep_conv with new norm
+        self.sep_conv = nn.Sequential(
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*8, kernel_size=3, padding=1, groups=planes*8, bias=True),
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*2, kernel_size=1, bias=True),
+            build_norm_layer(self.norm_cfg, planes*2)[1],  # Extract the module
+            nn.ReLU(inplace=True)
+        )
+
+        self.adaptive_learner = LocationAdaptiveLearnerLN(planes*2, planes*8, planes*8, norm_cfg=self.norm_cfg)
+
+    def forward(self, x):
+        '''
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        '''
+        c1, c2, c3, _, c5, _ = x
+
+        '''Stage 1'''
+        Aside1_proj = self.side1_proj(c1)
+        Aside1 = self.side1_block(Aside1_proj)  # (N, 128, H/4, W/4)
+        height, width = Aside1.shape[2:]
+
+        '''Stage 2'''
+        Aside2 = self.side2_block(c2)  # (N, 128, H/4, W/4)
+        Aside2 = F.interpolate(Aside2, size=[height, width], mode='bilinear', align_corners=False)
+        Aside2 = self.layer1(Aside1 + Aside2)  # (N, 128, H/4, W/4)
+
+        '''Stage 3'''
+        Aside3_proj = self.side3_proj(c3)  # Project channels
+        Aside3 = self.side3_block(Aside3_proj)  # (N, 128, H/16, W/16) -> but interpolate later
+        Aside3 = F.interpolate(Aside3, size=[height, width], mode='bilinear', align_corners=False)
+        Aside3 = self.layer2(Aside3 + Aside2)  # (N, 128, H/4, W/4)
+        
+        '''Stage 5'''
+        Aside5_proj = self.side5_proj(c5)
+        Aside5 = self.side5_block(Aside5_proj)
+        Aside5 = F.interpolate(Aside5, size=[height, width], mode='bilinear', align_corners=False)
+        Aside5 = Aside3 + Aside5  # (N, 128, H/4, W/4)
+
+        Aside5_w_proj = self.side5_w_proj(c5)
+        Aside5_w = self.side5_w_block(Aside5_w_proj)
+        Aside5_w = F.interpolate(Aside5_w, size=[height, width], mode='bilinear', align_corners=False)
+        
+        '''Fuse Sides 1-3 and 5'''
+        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2)  # (N, 128, 4, H/4, W/4)
+        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1)  # (N, 512, H/4, W/4)
+        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3))  # (N, 128, 4, H/4, W/4)
+        fuse = torch.mul(edge_5d, adaptive_weights)  # (N, 128, 4, H/4, W/4)
+        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4))  # (N, 512, H/4, W/4)
+        fuse = self.sep_conv(fuse)  # (N, 128, H/4, W/4)
+        
+        outputs = [Aside5, fuse]
+        
+        return tuple(outputs)
+
+class MIMIRLikePIDNetDBranch(CustomBaseModule):
+    '''
+    Multi-scale Inverted Module for Image Refinement:
+    BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
+    Renamed MIMIR.
+    '''
+    def __init__(self, planes=64, norm_cfg=dict(type='LN2d', eps=1e-6), **kwargs):
+        #super().__init__()
+        super(MIMIRLikePIDNetDBranch, self).__init__(planes, norm_cfg=norm_cfg, **kwargs)
         self.norm_cfg = norm_cfg
 
         # Side1: Downsampling projection + ConvNeXt block

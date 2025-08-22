@@ -3,6 +3,7 @@ from typing import List, Tuple
 from torch import Tensor
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import BaseSegHead, resize
@@ -45,9 +46,23 @@ class BaselineHead(BaseDecodeHead):
         self.seg_head = BaseSegHead(in_channels, channels, norm_cfg, act_cfg)
 
     def forward(self, x):
-        """Forward function."""
-        x = x[-1]
-        output = self.seg_head(x, self.cls_seg)
+        """
+        Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        """
+        x[-1] = F.interpolate(
+            x[-1],
+            size=x[1].shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        output = self.seg_head(x[-1], self.cls_seg)
         return output
     
     def loss(self, inputs: Tuple[Tensor], batch_data_samples: SampleList,

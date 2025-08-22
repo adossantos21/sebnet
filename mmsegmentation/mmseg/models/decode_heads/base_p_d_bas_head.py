@@ -72,15 +72,15 @@ class BaselinePDBASHead(BaseDecodeHead):
         if self.training:
             temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
             temp_d, x_d = self.d_module(x) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
-            p_supervised = self.p_head(temp_p, self.p_cls_seg)
-            d_supervised = self.d_head(temp_d, self.d_cls_seg)
+            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+            d_supervised = self.d_head(temp_d, self.d_cls_seg) # (N, 1, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
             feats = self.fusion(x_p, x[-1], x_d)
-            output = self.seg_head(feats, self.cls_seg)
+            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, p_supervised, d_supervised])
         else:
             x_p = self.p_module(x)

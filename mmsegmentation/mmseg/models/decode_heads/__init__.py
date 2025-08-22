@@ -41,6 +41,7 @@ from .base_d_head import BaselineDHead
 from .base_casenet_head import BaselineCASENetHead
 from .base_dff_head import BaselineDFFHead
 from .base_bem_head import BaselineBEMHead
+from .base_mimir_head import BaselineMIMIRHead
 from .base_p_d_head import BaselinePDHead
 from .base_p_sbd_head import BaselinePSBDHead
 from .base_d_sbd_head import BaselineDSBDHead
@@ -60,5 +61,5 @@ __all__ = [
     'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
     'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
     'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
-    'BaselinePDSBDBASHead'
+    'BaselinePDSBDBASHead', 'BaselineMIMIRHead'
 ]
