@@ -158,7 +158,7 @@ class DAPPM(BaseModule):
                                          dim=1)) + self.shortcut(inputs)
         x.append(out)
         
-        return tuple(x)
+        return x
 
 @MODELS.register_module()
 class PAPPM(DAPPM):

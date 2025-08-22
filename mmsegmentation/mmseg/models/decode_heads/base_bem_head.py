@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, CASENet
+from mmseg.models.utils import BaseSegHead, BEM
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,8 +15,8 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselineCASENetHead(BaseDecodeHead):
-    """Baseline + CASENet head for mapping feature to a predefined set
+class BaselineBEMHead(BaseDecodeHead):
+    """Baseline + BEM head for mapping feature to a predefined set
     of classes.
 
     Args:
@@ -46,7 +46,11 @@ class BaselineCASENetHead(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         if self.training:
-            self.casenet = CASENet(nclass=self.num_classes)
+            self.bem = BEM(planes=self.in_channels // 4)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
+            self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -62,13 +66,15 @@ class BaselineCASENetHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.casenet(x) # side5: (N, C=Num_Classes, H/4, W/4), fuse: (N, C=Num_Classes, H/4, W/4)
+            side5, fuse = self.bem(x) # side5 and fuse (N, C=128, H/4, W/4)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            output = self.seg_head(x[-1], self.cls_seg)
+            side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+            fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, side5, fuse])
         else:
             x[-1] = F.interpolate(
@@ -78,7 +84,7 @@ class BaselineCASENetHead(BaseDecodeHead):
                 align_corners=self.align_corners)
             output = self.seg_head(x[-1], self.cls_seg)
             return output
-
+        
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples

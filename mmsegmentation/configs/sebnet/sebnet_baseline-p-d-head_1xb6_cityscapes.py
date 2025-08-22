@@ -1,5 +1,3 @@
-# Pre-training with KoLeo Regularization
-
 _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'

@@ -74,9 +74,6 @@ train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
 
 iters = 120000
 val_interval=1000
-# optimizer
-#optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
-#optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
@@ -110,7 +107,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=120000, save_last=False,
+        type='CheckpointHook', by_epoch=False, save_begin=120001, save_last=False,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
