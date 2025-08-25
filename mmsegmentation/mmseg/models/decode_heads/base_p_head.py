@@ -3,13 +3,14 @@
 from mmseg.models.utils import BaseSegHead, PModule, PIFusion
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
 
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List
+from typing import List, Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
@@ -28,9 +29,10 @@ class BaselinePHead(BaseDecodeHead):
     """
 
     def __init__(self, 
-                 in_channels=256, 
-                 num_classes=19,
-                 norm_cfg: OptConfigType = dict(type='BN'),
+                 in_channels: int = 256, 
+                 num_classes: int = 19, 
+                 num_stem_blocks: int = 3,
+                 norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
         super().__init__(
@@ -44,30 +46,45 @@ class BaselinePHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.p_module = PModule(channels=self.in_channels // 4)
-        self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg_dfm)
+        self.num_stem_blocks = num_stem_blocks
+        self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+        self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         if self.training:
-            self.p_head = nn.Conv2d(self.in_channels // 2, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
+            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
+            self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
         Forward function.
         x should be a tuple of outputs:
-        x_2, x_3, x_4, x_out = x
-        x_2 has shape (N, 128, H/8, W/8)
-        x_3 has shape (N, 256, H/16, W/16)
-        x_4 has shape (N, 512, H/32, W/32)
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
             temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
-            p_supervised = self.p_head(temp_p)
+            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners)
             feats = self.fusion(x_p, x[-1])
-            output = self.seg_head(feats, self.cls_seg)
+            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, p_supervised])
         else:
             x_p = self.p_module(x)
+            x[-1] = F.interpolate(
+                x[-1],
+                size=x[1].shape[2:],
+                mode='bilinear',
+                align_corners=self.align_corners
+            )
             feats = self.fusion(x_p, x[-1])
             output = self.seg_head(feats, self.cls_seg)
             return output

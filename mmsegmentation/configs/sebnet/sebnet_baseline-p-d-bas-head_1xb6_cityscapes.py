@@ -130,7 +130,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=180001,
+        type='CheckpointHook', by_epoch=False, save_begin=160001,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
@@ -138,7 +138,7 @@ default_hooks = dict(
 custom_hooks = [
     dict(
         initial_grads=True,
-        interval=18000,
+        interval=16000,
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),

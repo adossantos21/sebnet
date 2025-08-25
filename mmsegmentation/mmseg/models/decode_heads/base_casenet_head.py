@@ -30,7 +30,7 @@ class BaselineCASENetHead(BaseDecodeHead):
 
     def __init__(self, 
                  in_channels=256, 
-                 num_classes=19, 
+                 num_classes=19,
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
