@@ -1531,8 +1531,8 @@ class Mask2Edge(BaseTransform):
                 mask=mask, label2trainId=self.label2trainId
             )
 
-        results['gt_edge_map'] = edge
-        results['edge_map_shape'] = edge.shape
+        results['gt_multi_edge_map'] = edge
+        results['multi_edge_map_shape'] = edge.shape
         results['radius'] = self.radius
 
         return results
