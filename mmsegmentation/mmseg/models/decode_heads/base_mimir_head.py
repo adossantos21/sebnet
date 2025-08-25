@@ -75,11 +75,6 @@ class BaselineMIMIRHead(BaseDecodeHead):
             side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
             fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
             output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
-            print(f"side5 shape: {side5.shape}")
-            print(f"fuse shape: {fuse.shape}")
-            print(f"output shape: {output.shape}")
-            import sys
-            sys.exit()
             return tuple([output, side5, fuse])
         else:
             x[-1] = F.interpolate(
