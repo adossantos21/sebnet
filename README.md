@@ -14,22 +14,28 @@ To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDN
 ### Stage 2 - Finetuning
 Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 9 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
 1.  **Ablation 01** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
-2.  **Ablation 02** - Baseline + CASENet SBD Head
-3.  **Ablation 03** - Baseline + DFF SBD Head
-4.  **Ablation 04** - Baseline + BEM SBD Head
-5.  **Ablation 05** - Baseline + MIMIR SBD Head
-6.  **Ablation 06** - Baseline + P Head (from PIDNet's P Branch)
-7.  **Ablation 07** - Baseline + D Head (from PIDNet's D Branch)
-8.  **Ablation 08** - Baseline + P Head + D Head
-9.  **Ablation 09** - Baseline + P Head + SBD Head
-10.  **Ablation 10** - Baseline + D Head + SBD Head
-11. **Ablation 11** - Baseline + P Head + D Head + BAS Loss (PIDNet)
-12. **Ablation 12** - Baseline + P Head + D Head + SBD Head
-13. **Ablation 13** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
-14. **Ablation 14** - Best Model + Mapillary Pre-training
+2.  **Ablation 02** - Baseline + CASENet SBD Head, Edge Width 2
+3.  **Ablation 03** - Baseline + DFF SBD Head, Edge Width 2
+4.  **Ablation 04** - Baseline + BEM SBD Head, Edge Width 2
+5.  **Ablation 05** - Baseline + MIMIR SBD Head, Edge Width 2
+6.  **Ablation 06** - Baseline + SBD Head, Edge Width 1
+7.  **Ablation 07** - Baseline + SBD Head, Edge Width 4
+8.  **Ablation 08** - Baseline + SBD Head, Edge Width 8
+9.  **Ablation 09** - Baseline + D Head (from PIDNet's D Branch)
+10. **Ablation 10** - Baseline + P Head (from PIDNet's P Branch)
+11. **Ablation 11** - Baseline + P Head + D Head
+12. **Ablation 12** - Baseline + D Head + SBD Head
+13. **Ablation 13** - Baseline + P Head + SBD Head (Conditioning)
+14. **Ablation 14** - Baseline + P Head + SBD Head (Fusion)
+15. **Ablation 15** - Baseline + P Head + SBD Head + BAS Loss (Conditioning)
+16. **Ablation 16** - Baseline + P Head + SBD Head + BAS Loss (Fusion)
+17. **Ablation 17** - Baseline + P Head + D Head + BAS Loss (PIDNet)
+18. **Ablation 18** - Baseline + P Head + D Head + SBD Head
+19. **Ablation 19** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
+20. **Ablation 20** - Best Model + Mapillary Pre-training
 
 ## Results
-Results are pending. The target date for segmentation results is September 15th, 2025. The target date for boundary results is October 15th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
+Results are pending. The target date for segmentation results is September 18th, 2025. The target date for boundary results is October 10th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
 
 ## References
 <a id="1">[1]</a> 
