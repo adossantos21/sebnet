@@ -38,6 +38,7 @@ from .vpd_depth_head import VPDDepthHead
 from .base_head import BaselineHead
 from .base_p_head import BaselinePHead
 from .base_d_head import BaselineDHead
+from .base_dmultilabel_head import BaselineDMultiLabelHead
 from .base_casenet_head import BaselineCASENetHead
 from .base_dff_head import BaselineDFFHead
 from .base_bem_head import BaselineBEMHead
@@ -61,5 +62,5 @@ __all__ = [
     'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
     'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
     'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
-    'BaselinePDSBDBASHead', 'BaselineMIMIRHead'
+    'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead'
 ]
