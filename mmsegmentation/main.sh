@@ -12,6 +12,11 @@ export CUDA_VISIBLE_DEVICES=3
 #python tools/train.py configs/sebnet/sebnet_baseline-casenet-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-bem-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-dff-head_1xb6_cityscapes.py
-python tools/train.py configs/sebnet/sebnet_baseline-mimir-head_1xb6_cityscapes.py
-#python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-mimir-head_1xb6_cityscapes.py
+
+#python tools/train.py configs/sebnet/sebnet_baseline-p-head_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-d-head_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-p-d-head_1xb6_cityscapes.py
+python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
+
 

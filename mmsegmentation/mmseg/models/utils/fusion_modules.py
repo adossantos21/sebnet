@@ -237,6 +237,6 @@ class PIFusion(BaseModule):
             x_i (Tensor): The feature map from I branch.
 
         Returns:
-            Tensor: The feature map with boundary-attention-guided fusion.
+            Tensor: The feature map with naive fusion.
         """
         return self.conv(x_p + x_i)

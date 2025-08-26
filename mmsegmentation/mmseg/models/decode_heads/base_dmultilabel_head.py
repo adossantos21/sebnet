@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PModule, DModule, Bag
+from mmseg.models.utils import BaseSegHead, DModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,9 +15,9 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePDBASHead(BaseDecodeHead):
-    """Baseline + P + D head (PIDNet) + BAS loss for mapping feature to a predefined set
-    of classes. Includes extra boundary awareness loss seen in PIDNet.
+class BaselineDMultiLabelHead(BaseDecodeHead):
+    """Baseline + D head for mapping feature to a predefined set
+    of classes.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -47,14 +47,10 @@ class BaselinePDBASHead(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         self.num_stem_blocks = num_stem_blocks
-        self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.fusion = Bag(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         if self.training:
-            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
+            self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
             self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, norm_cfg)
-            self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
-            self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+            self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -70,78 +66,59 @@ class BaselinePDBASHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
-            temp_d, x_d = self.d_module(x) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
-            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
-            d_supervised = self.d_head(temp_d, self.d_cls_seg) # (N, 1, H/8, W/8)
+            temp_d, _ = self.d_module(x) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            feats = self.fusion(x_p, x[-1], x_d)
-            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
-            return tuple([output, p_supervised, d_supervised])
+            d_supervised = self.d_head(temp_d, self.d_cls_seg)
+            output = self.seg_head(x[-1], self.cls_seg)
+            return tuple([output, d_supervised])
         else:
-            x_p = self.p_module(x)
-            x_d = self.d_module(x)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners
             )
-            feats = self.fusion(x_p, x[-1], x_d)
-            output = self.seg_head(feats, self.cls_seg)
+            output = self.seg_head(x[-1], self.cls_seg)
             return output
-        
+
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
         gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
         return gt_sem_segs, gt_edge_segs
 
-    def loss_by_feat(self, seg_logits: Tuple[Tensor],
+    def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        loss = dict()
-        i_logit, p_logit, d_logit = seg_logits
+        seg_logits, d_logits = logits
         sem_label, bd_label = self._stack_batch_gt(batch_data_samples)
-        p_logit = resize(
-            input=p_logit,
+        seg_logits = resize(
+            input=seg_logits,
             size=sem_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        i_logit = resize(
-            input=i_logit,
-            size=sem_label.shape[2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        d_logit = resize(
-            input=d_logit,
+        d_logits = resize(
+            input=d_logits,
             size=bd_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         sem_label = sem_label.squeeze(1)
         bd_label = bd_label.squeeze(1)
-        loss['loss_sem_p'] = self.loss_decode[0](
-            p_logit, sem_label, ignore_index=self.ignore_index)
-        loss['loss_sem_i'] = self.loss_decode[1](i_logit, sem_label)
-        loss['loss_bd'] = self.loss_decode[2](d_logit, bd_label)
-        filler = torch.ones_like(sem_label) * self.ignore_index
-        sem_bd_label = torch.where(
-            torch.sigmoid(d_logit[:, 0, :, :]) > 0.8, sem_label, filler)
-        loss['loss_sem_bd'] = self.loss_decode[3](i_logit, sem_bd_label)
-        loss['acc_seg'] = accuracy(
-            i_logit, sem_label, ignore_index=self.ignore_index)
-        
         logits = dict(
-            seg_logits=i_logit,
-            p_logits=p_logit,
-            d_logits=d_logit
+            seg_logits=seg_logits,
+            d_logits=d_logits,
         )
+        loss = dict()
+        loss['loss_ce'] = self.loss_decode[0](seg_logits, sem_label)
+        loss['loss_d'] = self.loss_decode[1](d_logits, bd_label)
+        loss['acc_seg'] = accuracy(
+            seg_logits, sem_label, ignore_index=self.ignore_index)
         return loss, logits
