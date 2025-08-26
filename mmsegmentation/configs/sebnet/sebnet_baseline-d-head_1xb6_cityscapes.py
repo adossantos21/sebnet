@@ -57,7 +57,7 @@ model = dict(
                 loss_name='loss_ce'),
             dict(
                 type='BoundaryLoss',
-                loss_weight=20.0,
+                loss_weight=5.0,
                 loss_name='loss_d')
         ]),
     train_cfg=dict(),
@@ -74,7 +74,7 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='GenerateEdge', edge_width=4),
+    dict(type='GenerateEdge', edge_width=2),
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))

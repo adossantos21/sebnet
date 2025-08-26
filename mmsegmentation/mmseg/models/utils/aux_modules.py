@@ -655,7 +655,7 @@ class BEM_Original(CustomBaseModule):
         
         return tuple(outputs)
     
-class MIMIR_Original(CustomBaseModule):
+class MIMIR(CustomBaseModule):
     '''
     Multi-scale Inverted Module for Image Refinement:
     BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
