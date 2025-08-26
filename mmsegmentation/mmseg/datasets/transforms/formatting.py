@@ -98,6 +98,12 @@ class PackSegInputs(BaseTransform):
                 data=to_tensor(results['gt_depth_map'][None, ...]))
             data_sample.set_data(dict(gt_depth_map=PixelData(**gt_depth_data)))
 
+        if 'gt_multi_edge_map' in results:
+            gt_multi_edge_data = dict(
+                data=to_tensor(results['gt_multi_edge_map'][None,
+                                                      ...].astype(np.int64)))
+            data_sample.set_data(dict(gt_multi_edge_map=PixelData(**gt_multi_edge_data)))        
+
         img_meta = {}
         for key in self.meta_keys:
             if key in results:

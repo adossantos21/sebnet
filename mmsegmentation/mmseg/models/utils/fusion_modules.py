@@ -240,3 +240,6 @@ class PIFusion(BaseModule):
             Tensor: The feature map with naive fusion.
         """
         return self.conv(x_p + x_i)
+    
+class PISBDFusion(BaseModule):
+    pass

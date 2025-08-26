@@ -107,7 +107,7 @@ class BaselineDMultiLabelHead(BaseDecodeHead):
             align_corners=self.align_corners)
         d_logits = resize(
             input=d_logits,
-            size=bd_label.shape[2:],
+            size=bd_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         sem_label = sem_label.squeeze(1)

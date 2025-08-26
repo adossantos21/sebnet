@@ -284,7 +284,7 @@ class CASENet(CustomBaseModule):
     def __init__(self, nclass, norm_layer=nn.BatchNorm2d, **kwargs):
         super(CASENet, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
 
-        self.side1 = nn.Conv2d(64, 1, 1, stride=2, padding=1, bias=True)
+        self.side1 = nn.Conv2d(64, 1, 1, stride=2, bias=True)
         self.side2 = nn.Conv2d(128, 1, 1, bias=True)
         self.side3 = nn.Conv2d(256, 1, 1, bias=True)
         self.side5 = nn.Conv2d(1024, nclass, 1, bias=True) # originally, 1024 was 2048; changed due to PIDNet architecture
@@ -334,7 +334,7 @@ class DFF(CustomBaseModule):
         super(DFF, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
         self.nclass = nclass
         self.ada_learner = LocationAdaptiveLearner(nclass, nclass*4, nclass*4, norm_layer=norm_layer)
-        self.side1 = nn.Sequential(nn.Conv2d(64, 1, 1, stride=2, padding=1, bias=True),
+        self.side1 = nn.Sequential(nn.Conv2d(64, 1, 1, stride=2, bias=True),
                                    norm_layer(1))
         self.side2 = nn.Sequential(nn.Conv2d(128, 1, 1, bias=True),
                                    norm_layer(1))
@@ -435,7 +435,7 @@ class BEM(CustomBaseModule):
         Aside1 = self.side1(c1) # (N, 128, H/8, W/8), may need to clone input
 
         '''Stage 2'''
-        Aside2 = self.side2(c2), # (N, 128, H/8, W/8)
+        Aside2 = self.side2(c2) # (N, 128, H/8, W/8)
         Aside2 = self.layer1(Aside1 + Aside2) # (N, 128, H/8, W/8)
         
         '''Stage 3'''
