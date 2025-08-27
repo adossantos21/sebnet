@@ -42,6 +42,11 @@ from .base_dmultilabel_head import BaselineDMultiLabelHead
 from .base_casenet_head import BaselineCASENetHead
 from .base_dff_head import BaselineDFFHead
 from .base_bem_head import BaselineBEMHead
+from .base_d_head_earlier_layers import BaselineDHeadEarlierLayers
+from .base_dmultilabel_head_earlier_layers import BaselineDMultiLabelHeadEarlierLayers
+from .base_casenet_head_earlier_layers import BaselineCASENetHeadEarlierLayers
+from .base_dff_head_earlier_layers import BaselineDFFHeadEarlierLayers
+from .base_bem_head_earlier_layers import BaselineBEMHeadEarlierLayers
 from .base_mimir_head import BaselineMIMIRHead
 from .base_p_d_head import BaselinePDHead
 from .base_p_sbd_head_both import BaselinePSBDHead
@@ -65,5 +70,8 @@ __all__ = [
     'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
     'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
     'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead',
-    'ConditionalBaselinePSBDHead', 'BagBaselinePSBDHead'
+    'ConditionalBaselinePSBDHead', 'BagBaselinePSBDHead',
+    'BaselineDHeadEarlierLayers', 'BaselineDMultiLabelHeadEarlierLayers',
+    'BaselineCASENetHeadEarlierLayers', 'BaselineDFFHeadEarlierLayers',
+    'BaselineBEMHeadEarlierLayers',
 ]

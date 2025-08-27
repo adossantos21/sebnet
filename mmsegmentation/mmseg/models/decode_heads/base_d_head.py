@@ -46,7 +46,7 @@ class BaselineDHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.stride=1
+        self.stride = 1
         self.num_stem_blocks = num_stem_blocks
         if self.training:
             self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)

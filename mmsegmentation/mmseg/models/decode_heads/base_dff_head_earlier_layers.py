@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, CASENet
+from mmseg.models.utils import BaseSegHead
+from mmseg.models.utils import DFF_EarlierLayers as DFF
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import resize
@@ -15,8 +15,8 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselineCASENetHead(BaseDecodeHead):
-    """Baseline + CASENet head for mapping feature to a predefined set
+class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
+    """Baseline + DFF head for mapping feature to a predefined set
     of classes.
 
     Args:
@@ -29,8 +29,8 @@ class BaselineCASENetHead(BaseDecodeHead):
     """
 
     def __init__(self, 
-                 in_channels: int = 256, 
-                 num_classes: int = 19, 
+                 in_channels=256, 
+                 num_classes=19, 
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
@@ -47,7 +47,7 @@ class BaselineCASENetHead(BaseDecodeHead):
         self.num_classes = num_classes
         self.stride = 1
         if self.training:
-            self.casenet = CASENet(nclass=self.num_classes)
+            self.dff = DFF(nclass=self.num_classes)
         self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -63,13 +63,13 @@ class BaselineCASENetHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.casenet(x) # side5: (N, C=Num_Classes, H/4, W/4), fuse: (N, C=Num_Classes, H/4, W/4)
+            side5, fuse = self.dff(x) # side5: (N, K, H/4, W/4), fuse: (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            output = self.seg_head(x[-1], self.cls_seg)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, side5, fuse])
         else:
             x[-1] = F.interpolate(

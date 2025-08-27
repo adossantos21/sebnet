@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, CASENet
+from mmseg.models.utils import BaseSegHead
+from mmseg.models.utils import CASENet_EarlierLayers as CASENet
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,7 +16,7 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselineCASENetHead(BaseDecodeHead):
+class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
     """Baseline + CASENet head for mapping feature to a predefined set
     of classes.
 

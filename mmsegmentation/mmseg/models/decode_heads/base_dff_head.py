@@ -44,9 +44,10 @@ class BaselineDFFHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         if self.training:
             self.dff = DFF(nclass=self.num_classes)
-        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
