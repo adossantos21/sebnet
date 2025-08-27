@@ -46,13 +46,14 @@ class BaselinePHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         self.num_stem_blocks = num_stem_blocks
         self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
         self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         if self.training:
-            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
+            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
             self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """

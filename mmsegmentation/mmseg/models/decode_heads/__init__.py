@@ -44,7 +44,9 @@ from .base_dff_head import BaselineDFFHead
 from .base_bem_head import BaselineBEMHead
 from .base_mimir_head import BaselineMIMIRHead
 from .base_p_d_head import BaselinePDHead
-from .base_p_sbd_head import BaselinePSBDHead
+from .base_p_sbd_head_both import BaselinePSBDHead
+from .base_p_sbd_head_conditioned import ConditionalBaselinePSBDHead
+from .base_p_sbd_head_fused import BagBaselinePSBDHead
 from .base_d_sbd_head import BaselineDSBDHead
 from .base_p_d_bas_head import BaselinePDBASHead
 from .base_p_d_sbd_head import BaselinePDSBDHead
@@ -62,5 +64,6 @@ __all__ = [
     'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
     'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
     'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
-    'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead'
+    'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead',
+    'ConditionalBaselinePSBDHead', 'BagBaselinePSBDHead'
 ]

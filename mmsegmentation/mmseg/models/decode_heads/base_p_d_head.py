@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PModule, DModule, Bag
+from mmseg.models.utils import BaseSegHead, PModule, Bag
+#from mmseg.models.utils import DModule
+from mmseg.models.utils import DModule_EarlierLayers as DModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -47,15 +49,16 @@ class BaselinePDHead(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         self.num_stem_blocks = num_stem_blocks
+        self.stride = 1
         self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
         self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
         self.fusion = Bag(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         if self.training:
-            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
-            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, norm_cfg)
+            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
+            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg)
             self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
             self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """

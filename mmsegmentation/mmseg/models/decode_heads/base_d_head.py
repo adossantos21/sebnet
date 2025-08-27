@@ -46,12 +46,13 @@ class BaselineDHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride=1
         self.num_stem_blocks = num_stem_blocks
         if self.training:
             self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, norm_cfg)
+            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
