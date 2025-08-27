@@ -1,6 +1,19 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PISBDFusion, PIFusion, PModule, CASENet, DFF, BEM, MIMIR
+from mmseg.models.utils import BaseSegHead, Bag, PModule
+'''
+from mmseg.models.utils import(
+    CASENet_Original as CASENet,
+    DFF_Original as DFF,
+    BEM_Original as BEM
+)
+'''
+from mmseg.models.utils import(
+    CASENet,
+    DFF,
+    BEM
+)
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,14 +23,14 @@ from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple
+from typing import Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePSBDHead(BaseDecodeHead):
+class BagBaselinePSBDHead(BaseDecodeHead):
     """Baseline + P Branch + SBD head for mapping feature to a predefined set
-    of classes.
+    of classes (with bag fusion).
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -35,7 +48,6 @@ class BaselinePSBDHead(BaseDecodeHead):
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  sbd_head='casenet', 
-                 condition=True,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -48,30 +60,27 @@ class BaselinePSBDHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         self.num_stem_blocks = num_stem_blocks
         self.sbd_head = sbd_head
-        self.condition = condition
         self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        if self.condition:
-            self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+        self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
+        self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
+        self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
+        self.fuse_cls_seg = nn.Conv2d(in_channels, self.num_classes, kernel_size=1)
+        self.fusion = Bag(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
+        if self.sbd_head == 'casenet' or self.sbd_head == 'dff':
+            self.sbd = CASENet(nclass=self.num_classes) if self.sbd_head=='casenet' else DFF(nclass=self.num_classes)
+            self.fuse_head = BaseSegHead(self.num_classes, in_channels, self.stride, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(self.num_classes, in_channels // 2, self.stride, norm_cfg, act_cfg)
+        elif self.sbd_head == 'bem':
+            self.sbd = BEM(planes=self.in_channels // 4)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels, self.stride, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
         else:
-            self.fusion = PISBDFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
-        if self.training:
-            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
-            self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
-            if self.sbd_head == 'casenet':
-                self.sbd = CASENet(nclass=self.num_classes)
-            elif self.sbd_head == 'dff':
-                self.sbd = DFF(nclass=self.num_classes)
-            elif self.sbd_head == 'bem' or self.sbd_head == 'mimir':
-                self.sbd = BEM(planes=self.in_channels // 4) if self.sbd_head=='bem' else MIMIR(planes=self.in_channels // 4)
-                self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
-                self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
-                self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-                self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-            else:
-                raise ValueError(f'Invalid SBD Head, should be one of ["casenet", "dff", "bem", "mimir"]; instead it is: {self.sbd_head}')
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
+            raise ValueError(f"Invalid SBD Head. self.sbd_head should be one of ['casenet', 'dff', 'bem']; instead it is {self.sbd_head}")
+        
 
     def forward(self, x):
         """
@@ -86,29 +95,36 @@ class BaselinePSBDHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
-            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
-            side5, fuse = self.sbd(x) # side5 and fuse (N, C=128, H/8, W/8)
-            x[-1] = F.interpolate(
-                x[-1],
-                size=x[1].shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners)
-            if self.sbd_head == 'bem' or self.sbd_head == 'mimir':
-                side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
-                fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
-            feats = self.fusion(x_p, x[-1]) if self.condition else self.fusion(x_p, x[-1], fuse)
-            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
-            return tuple([output, p_supervised, side5, fuse])
+            temp_p, x_p = self.p_module(x)
+            p_supervised = self.p_head(temp_p, self.p_cls_seg)
+            side5, fuse = self.sbd(x)
+            if self.sbd_head == 'bem':
+                side5 = self.side5_head(side5, self.side5_cls_seg)
+                fuse_fusion = self.fuse_head(fuse, None)
+                fuse = self.fuse_cls_seg(fuse_fusion)
+            if self.sbd_head == 'casenet' or self.sbd_head == 'dff':
+                side5 = self.side5_head(side5, self.side5_cls_seg)
+                fuse_fusion = self.fuse_head(fuse, None)
+                fuse = self.fuse_cls_seg(fuse_fusion)
         else:
             x_p = self.p_module(x)
-            x[-1] = F.interpolate(
-                x[-1],
-                size=x[1].shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners)
-            feats = self.fusion(x_p, x[-1]) if self.condition else self.fusion(x_p, x[-1], fuse)
-            output = self.seg_head(feats, self.cls_seg)
+            _, fuse = self.sbd(x)
+            fuse_fusion = self.fuse_head(fuse, None)
+        x[-1] = F.interpolate(
+            x[-1],
+            size=x[1].shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        #print(f"x_p shape: {x_p.shape}")
+        #print(f"x[-1] shape: {x[-1].shape}")
+        #print(f"fuse_fusion shape: {fuse_fusion.shape}")
+        #import sys
+        #sys.exit()
+        feats = self.fusion(x_p, x[-1], fuse_fusion)
+        output = self.seg_head(feats, self.cls_seg)
+        if self.training:
+            return tuple([output, p_supervised, side5, fuse])
+        else:
             return output
         
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
