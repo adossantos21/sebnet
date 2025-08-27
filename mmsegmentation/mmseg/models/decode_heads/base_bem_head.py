@@ -45,13 +45,14 @@ class BaselineBEMHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         if self.training:
             self.bem = BEM(planes=self.in_channels // 4)
-            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
-            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
             self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
             self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """

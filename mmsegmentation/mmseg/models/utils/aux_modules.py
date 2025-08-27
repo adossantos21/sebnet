@@ -588,7 +588,7 @@ class DModule_EarlierLayers(CustomBaseModule):
         x_d = self.d_branch_layers[2](self.relu(x_d))
         return tuple([temp_d, x_d]) if self.training else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
 
-class CASENet_Original(CustomBaseModule):
+class CASENet_EarlierLayers(CustomBaseModule):
     '''
     Model layers for the CASENet SBD module.
     Slight change to the CASENet architecture:
@@ -597,7 +597,7 @@ class CASENet_Original(CustomBaseModule):
         training.
     '''
     def __init__(self, nclass, norm_layer=nn.BatchNorm2d, **kwargs):
-        super(CASENet_Original, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
+        super(CASENet_EarlierLayers, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
 
         self.side1 = nn.Conv2d(64, 1, 1)
         self.side2 = nn.Sequential(nn.Conv2d(128, 1, 1, bias=True),
@@ -638,12 +638,12 @@ class CASENet_Original(CustomBaseModule):
 
         return tuple(outputs)
     
-class DFF_Original(CustomBaseModule):
+class DFF_EarlierLayers(CustomBaseModule):
     '''
     Model layers for the Dynamic Feature Fusion (DFF) SBD module.
     '''
     def __init__(self, nclass, norm_layer=nn.BatchNorm2d, **kwargs):
-        super(DFF_Original, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
+        super(DFF_EarlierLayers, self).__init__(nclass, norm_layer=norm_layer, **kwargs)
         self.nclass = nclass
         self.ada_learner = LocationAdaptiveLearner(nclass, nclass*4, nclass*4, norm_layer=norm_layer)
         self.side1 = nn.Sequential(nn.Conv2d(64, 1, 1),
@@ -697,12 +697,12 @@ class DFF_Original(CustomBaseModule):
         return tuple(outputs)
 
 
-class BEM_Original(CustomBaseModule):
+class BEM_EarlierLayers(CustomBaseModule):
     '''
     Model layers for DCBNetv1's SBD module, Boundary Extraction Module (BEM).
     '''
     def __init__(self, planes=64, norm_layer=nn.BatchNorm2d, **kwargs):
-        super(BEM_Original, self).__init__(planes, norm_layer=norm_layer, **kwargs)
+        super(BEM_EarlierLayers, self).__init__(planes, norm_layer=norm_layer, **kwargs)
         self.norm_layer = norm_layer
 
         self.side1 = nn.Sequential(nn.Conv2d(in_channels=planes, out_channels=planes*2, kernel_size=3, padding=1, bias=True), # (N, 128, H/4, W/4)

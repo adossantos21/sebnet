@@ -34,9 +34,9 @@ from .aux_modules import (
     BEM,
     MIMIR,
     DModule_EarlierLayers,
-    CASENet_Original,
-    DFF_Original,
-    BEM_Original
+    CASENet_EarlierLayers,
+    DFF_EarlierLayers,
+    BEM_EarlierLayers,
 )
 
 __all__ = [
@@ -47,6 +47,6 @@ __all__ = [
     'cross_attn_layer', 'LayerNorm2d', 'MLP', 'BottleneckExp2', 'LayerNorm2dSAN',
     'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
     "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM", "ConvNeXtBlock",
-    "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", "CASENet_Original",
-    "DFF_Original", "BEM_Original", "DModule_EarlierLayers"
+    "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", "CASENet_EarlierLayers",
+    "DFF_EarlierLayers", "BEM_EarlierLayers", "DModule_EarlierLayers"
 ]
