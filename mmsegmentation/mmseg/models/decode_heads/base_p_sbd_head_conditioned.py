@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PIFusion, PModule, CASENet, DFF, BEM
+from mmseg.models.utils import BaseSegHead, PIFusion, PModule, DModule, CASENet, DFF, BEM
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,7 +34,8 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
                  num_stem_blocks: int = 3,
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
-                 sbd_head='casenet', 
+                 sbd_head: str = 'd_module', 
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -47,25 +48,31 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         self.num_stem_blocks = num_stem_blocks
         self.sbd_head = sbd_head
+        self.eval_edges = eval_edges
         self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, norm_cfg, act_cfg)
+        self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
         self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
         self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
         self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
         self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
         if self.sbd_head == 'casenet' or self.sbd_head == 'dff':
             self.sbd = CASENet(nclass=self.num_classes) if self.sbd_head=='casenet' else DFF(nclass=self.num_classes)
-            self.side5_head = BaseSegHead(self.num_classes, in_channels // 2, norm_cfg, act_cfg)
-            self.fuse_head = BaseSegHead(self.num_classes, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(self.num_classes, in_channels // 2, self.stride, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(self.num_classes, in_channels // 2, self.stride, norm_cfg, act_cfg)
         elif self.sbd_head == 'bem':
             self.sbd = BEM(planes=self.in_channels // 4)
-            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
-            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
+        elif self.sbd_head == 'd_module':
+            self.sbd = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
+            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
         else:
-            raise ValueError(f"Invalid SBD Head. self.sbd_head should be one of ['casenet', 'dff', 'bem']; instead it is {self.sbd_head}")
+            raise ValueError(f"Invalid SBD Head. self.sbd_head should be one of ['casenet', 'dff', 'bem', 'd_module']; instead it is {self.sbd_head}")
 
     def forward(self, x):
         """
@@ -82,11 +89,13 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
         if self.training:
             temp_p, x_p = self.p_module(x)
             p_supervised = self.p_head(temp_p, self.p_cls_seg)
-            side5, fuse = self.sbd(x)
+            sbd_supervised = self.sbd(x)
             if self.sbd_head == 'bem':
+                side5, fuse = sbd_supervised
                 side5 = self.side5_head(side5, self.side5_cls_seg)
                 fuse_fusion = self.fuse_head(fuse, None)
                 fuse = self.fuse_cls_seg(fuse_fusion)
+                sbd_supervised = tuple([side5, fuse])
         else:
             x_p = self.p_module(x)
         x[-1] = F.interpolate(
@@ -97,7 +106,7 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
         feats = self.fusion(x_p, x[-1])
         output = self.seg_head(feats, self.cls_seg)
         if self.training:
-            return tuple([output, p_supervised, side5, fuse])
+            return tuple([output, p_supervised, sbd_supervised])
         else:
             return output
         
@@ -115,7 +124,7 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
         loss = dict()
-        seg_logits, p_logits, side5_logits, fuse_logits = logits
+        seg_logits, p_logits, sbd_logits = logits
         sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
@@ -127,28 +136,41 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
             size=sem_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        side5_logits = resize(
-            input=side5_logits,
-            size=bd_multi_label.shape[3:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        fuse_logits = resize(
-            input=fuse_logits,
-            size=bd_multi_label.shape[3:],
-            mode='bilinear',
-            align_corners=self.align_corners)
+        if self.sbd_head != 'd_module':
+            side5_logits = resize(
+                input=sbd_logits[0],
+                size=bd_multi_label.shape[3:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            fuse_logits = resize(
+                input=sbd_logits[1],
+                size=bd_multi_label.shape[3:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            logits = dict(
+                seg_logits=seg_logits,
+                p_logits=p_logits,
+                side5_logits=side5_logits,
+                fuse_logits=fuse_logits
+            )
+            loss['loss_side5'] = self.loss_decode[2](side5_logits, bd_multi_label)
+            loss['loss_fuse'] = self.loss_decode[3](fuse_logits, bd_multi_label)
+        else:
+            sbd_logits = resize(
+                input=sbd_logits,
+                size=bd_multi_label.shape[3:],
+                mode='bilinear',
+                align_corners=self.align_corners)
+            logits = dict(
+                seg_logits=seg_logits,
+                p_logits=p_logits,
+                sbd_logits=sbd_logits
+            )
+            loss['loss_sbd'] = self.loss_decode[2](sbd_logits, bd_multi_label)
         sem_label = sem_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
-        logits = dict(
-            seg_logits=seg_logits,
-            p_logits=p_logits,
-            side5_logits=side5_logits,
-            fuse_logits=fuse_logits
-        )
         loss['loss_sem'] = self.loss_decode[0](seg_logits, sem_label)
         loss['loss_p'] = self.loss_decode[1](p_logits, sem_label)
-        loss['loss_side5'] = self.loss_decode[2](side5_logits, bd_multi_label)
-        loss['loss_fuse'] = self.loss_decode[3](fuse_logits, bd_multi_label)
         loss['acc_seg'] = accuracy(
             seg_logits, sem_label, ignore_index=self.ignore_index)
         return loss, logits
