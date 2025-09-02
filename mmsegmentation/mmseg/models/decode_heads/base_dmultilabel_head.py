@@ -35,6 +35,7 @@ class BaselineDMultiLabelHead(BaseDecodeHead):
                  num_stem_blocks: int = 3,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -49,8 +50,9 @@ class BaselineDMultiLabelHead(BaseDecodeHead):
         self.num_classes = num_classes
         self.stride = 1
         self.num_stem_blocks = num_stem_blocks
-        if self.training:
-            self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+        self.eval_edges = eval_edges
+        if self.training or self.eval_edges:
+            self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
             self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
@@ -78,13 +80,17 @@ class BaselineDMultiLabelHead(BaseDecodeHead):
             output = self.seg_head(x[-1], self.cls_seg)
             return tuple([output, d_supervised])
         else:
-            x[-1] = F.interpolate(
-                x[-1],
-                size=x[1].shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners
-            )
-            output = self.seg_head(x[-1], self.cls_seg)
+            if self.eval_edges:
+                temp_d, _ = self.d_module(x)
+                output = self.d_head(temp_d, self.d_cls_seg)
+            else:  
+                x[-1] = F.interpolate(
+                    x[-1],
+                    size=x[1].shape[2:],
+                    mode='bilinear',
+                    align_corners=self.align_corners
+                )
+                output = self.seg_head(x[-1], self.cls_seg)
             return output
 
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:

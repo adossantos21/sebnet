@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=3
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce_scratch.py
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce.py
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb8_cityscapes_ce_scratch.py
@@ -20,7 +20,7 @@ python tools/train.py configs/sebnet/sebnet_baseline-d-multilabel-head_1xb6_city
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
 
-python tools/train.py configs/sebnet/sebnet_baseline-d-head-earlier-layers_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-d-head-earlier-layers_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-casenet-head-earlier-layers_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-d-multilabel-head-earlier-layers_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-dff-head-earlier-layers_1xb6_cityscapes.py
