@@ -54,11 +54,11 @@ model = dict(
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
-                loss_name='loss_ce'),
+                loss_name='loss_sem'),
             dict(
                 type='MultiLabelEdgeLoss',
                 loss_weight=5.0,
-                loss_name='loss_d')
+                loss_name='loss_sbd')
         ]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

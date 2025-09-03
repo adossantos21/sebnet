@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
-checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_1xb64_in1k/20250713_194653/checkpoints/pretrain01_staged_1xb64_in1k/20250713_194653/epoch_98.pth"
+checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
@@ -47,7 +47,6 @@ model = dict(
         num_classes=19,
         in_channels=256,
         num_stem_blocks=num_stem_blocks,
-        sbd_head='dff',
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
@@ -55,7 +54,7 @@ model = dict(
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
-                loss_name='loss_ce'),
+                loss_name='loss_sem'),
             dict(
                 type='OhemCrossEntropy',
                 thres=0.9,
@@ -66,11 +65,7 @@ model = dict(
             dict(
                 type='MultiLabelEdgeLoss',
                 loss_weight=5.0,
-                loss_name='loss_side5'),
-            dict(
-                type='MultiLabelEdgeLoss',
-                loss_weight=5.0,
-                loss_name='loss_fuse')
+                loss_name='loss_sbd')
         ]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

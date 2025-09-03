@@ -15,7 +15,7 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePDSBDBASHead(BaseDecodeHead):
+class BaselinePDSBDBASWithSBDHead(BaseDecodeHead):
     """Baseline + P Branch + D Branch + SBD head for mapping feature to a predefined set
     of classes (with bag fusion).
 
@@ -160,7 +160,7 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
         loss['loss_sbd'] = self.loss_decode[3](sbd_logits, bd_multi_label)
         filler = torch.ones_like(sem_label) * self.ignore_index
         sem_bd_label = torch.where(
-            torch.sigmoid(d_logits[:, 0, :, :]) > 0.8, sem_label, filler)
+            torch.sigmoid(torch.max(sbd_logits, dim=0)[0]) > 0.8, sem_label, filler)
         loss['loss_bas'] = self.loss_decode[4](seg_logits, sem_bd_label)
         loss['acc_seg'] = accuracy(
             seg_logits, sem_label, ignore_index=self.ignore_index)

@@ -41,7 +41,7 @@ model = dict(
         out_channels=256, 
         num_scales=5),    # The type of the neck module.
     decode_head=dict(
-        type='BaselineDSBDHead',     # The type of the classification head module.
+        type='BagBaselinePSBDBASHead',     # The type of the classification head module.
         # All fields except `type` come from the __init__ method of class `LinearClsHead`
         # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
         num_classes=19,
@@ -56,13 +56,23 @@ model = dict(
                 loss_weight=1.0,
                 loss_name='loss_sem'),
             dict(
-                type='BoundaryLoss', 
-                loss_weight=20.0,
-                loss_name='loss_d'),
+                type='OhemCrossEntropy',
+                thres=0.9,
+                min_kept=131072,
+                class_weight=class_weight,
+                loss_weight=0.4,
+                loss_name='loss_p'),
             dict(
                 type='MultiLabelEdgeLoss',
                 loss_weight=5.0,
-                loss_name='loss_sbd')
+                loss_name='loss_sbd'),
+            dict(
+                type='OhemCrossEntropy',
+                thres=0.9,
+                min_kept=131072,
+                class_weight=class_weight,
+                loss_weight=1.0,
+                loss_name='loss_bas')
         ]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
@@ -78,7 +88,6 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='GenerateEdge', edge_width=4),
     dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]

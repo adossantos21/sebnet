@@ -49,13 +49,15 @@ from .base_dff_head_earlier_layers import BaselineDFFHeadEarlierLayers
 from .base_bem_head_earlier_layers import BaselineBEMHeadEarlierLayers
 from .base_mimir_head import BaselineMIMIRHead
 from .base_p_d_head import BaselinePDHead
-from .base_p_sbd_head_both import BaselinePSBDHead
+from .base_d_sbd_head import BaselineDSBDHead
 from .base_p_sbd_head_conditioned import ConditionalBaselinePSBDHead
 from .base_p_sbd_head_fused import BagBaselinePSBDHead
-from .base_d_sbd_head import BaselineDSBDHead
+from .base_p_sbd_bas_head_conditioned import ConditionalBaselinePSBDBASHead
+from .base_p_sbd_bas_head_fused import BagBaselinePSBDBASHead
 from .base_p_d_bas_head import BaselinePDBASHead
 from .base_p_d_sbd_head import BaselinePDSBDHead
 from .base_p_d_sbd_bas_head import BaselinePDSBDBASHead
+from .base_p_d_sbd_basWithSBD_head import BaselinePDSBDBASWithSBDHead
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -67,11 +69,12 @@ __all__ = [
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
     'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
-    'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead', 'BaselinePSBDHead',
+    'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead',
     'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
     'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead',
     'ConditionalBaselinePSBDHead', 'BagBaselinePSBDHead',
     'BaselineDHeadEarlierLayers', 'BaselineDMultiLabelHeadEarlierLayers',
     'BaselineCASENetHeadEarlierLayers', 'BaselineDFFHeadEarlierLayers',
-    'BaselineBEMHeadEarlierLayers',
+    'BaselineBEMHeadEarlierLayers', 'ConditionalBaselinePSBDBASHead',
+    'BagBaselinePSBDBASHead', 'BaselinePDSBDBASWithSBDHead'
 ]
