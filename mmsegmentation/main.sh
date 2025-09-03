@@ -28,9 +28,9 @@ export CUDA_VISIBLE_DEVICES=3
 #python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-head-conditioned_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-head-fused_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes.py
-python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-fused_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-fused_1xb6_cityscapes.py
 
 #python tools/train.py configs/sebnet/sebnet_baseline-d-sbd-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py
-#python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-basWithSBD-head_1xb6_cityscapes.py
+python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-basWithSBD-head_1xb6_cityscapes.py
