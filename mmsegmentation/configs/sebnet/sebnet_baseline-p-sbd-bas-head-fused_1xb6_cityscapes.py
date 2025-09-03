@@ -41,7 +41,7 @@ model = dict(
         out_channels=256, 
         num_scales=5),    # The type of the neck module.
     decode_head=dict(
-        type='BagBaselinePSBDHead',     # The type of the classification head module.
+        type='BagBaselinePSBDBASHead',     # The type of the classification head module.
         # All fields except `type` come from the __init__ method of class `LinearClsHead`
         # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
         num_classes=19,
@@ -54,7 +54,7 @@ model = dict(
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
-                loss_name='loss_ce'),
+                loss_name='loss_sem'),
             dict(
                 type='OhemCrossEntropy',
                 thres=0.9,
