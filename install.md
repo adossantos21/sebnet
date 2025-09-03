@@ -41,6 +41,17 @@ This guide explains how to set up the environment and dependencies required to r
 5. **Verify Installation**:
 - Run `python -c "import torch; print(torch.__version__); print('CUDA available:' if torch.cuda.is_available() else 'CUDA not available')"` to check PyTorch (should show version 2.4.1 and CUDA status).
 - If CUDA is not available but you expect it to be, ensure your NVIDIA drivers are up to date and match your CUDA toolkit version.
+- **IMPORTANT** - If your models throw an error such as:
+    ```
+    ImportError: /home/user/miniconda3/envs/test_sebnet/lib/python3.8/site-packages/mmcv/_ext.cpython-38-x86_64-linux-gnu.so: undefined symbol: _ZN3c104cuda9SetDeviceEi
+    ```
+    Try uninstalling mmcv, and reinstalling it with mim:
+    ```
+    pip uninstall mmcv
+    pip install -U openmim
+    mim install mmengine
+    mim install "mmcv>=2.0.0"
+    ```
 
 6. **Run the Software**:
 - Follow the usage instructions in `README.md`.
