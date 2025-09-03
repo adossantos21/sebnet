@@ -153,7 +153,7 @@ def main():
                     # Scale and save as uint16 grayscale
                     scaled_pred = (pred_cls * 65535).astype(np.uint16)
                     img = Image.fromarray(scaled_pred, mode='I;16')
-                    img.save(os.path.join(out_dir, f"{basename}.png"))
+                    img.save(os.path.join(out_dir, f"{basename}_SBD.png"))
 
 if __name__ == "__main__":
     main()
