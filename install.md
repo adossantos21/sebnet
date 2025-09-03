@@ -17,9 +17,9 @@ This guide explains how to set up the environment and dependencies required to r
 
     `git clone git@github.com:adossantos21/paper_2.git`
 
+2. **Make the repo your current directory**:
 
-2. **Prepare the `environment.yml` File**:
-    - Open `environment.yml` in a text editor.
+    `cd paper_2`
 
 3. **Create the Conda Environment**:
 
