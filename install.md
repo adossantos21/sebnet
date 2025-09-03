@@ -17,11 +17,7 @@ This guide explains how to set up the environment and dependencies required to r
 
     `git clone git@github.com:adossantos21/paper_2.git`
 
-2. **Make the repo your current directory**:
-
-    `cd paper_2`
-
-3. **Create the Conda Environment**:
+2. **Create the Conda Environment**:
 
     `conda env create -f environment.yml`
 
@@ -30,10 +26,17 @@ This guide explains how to set up the environment and dependencies required to r
     - The process may take several minutes, as it downloads and installs packages from channels like `pytorch`, `nvidia`, `conda-forge`, and `defaults`.
     - If you encounter solver errors (e.g., package conflicts), try running `conda env create -f environment.yml --no-builds` to ignore specific build strings, or update Conda with `conda update conda`.
 
-4. **Activate the Environment**:
+3. **Activate the Environment**:
 
     `conda activate sebnet`
 
+4. **Initialize the Repository**:
+    Launch a terminal and execute the following commands:
+    ```
+    cd paper_2 # Makes the repository your current directory
+    chmod +x initialize.sh # Makes initiaize.sh an executable
+    ./intialize.sh # Executes initialize.sh, which installs remaining packages for mmpretrain and mmsegmentation
+    ```
 
 5. **Verify Installation**:
 - Run `python -c "import torch; print(torch.__version__); print('CUDA available:' if torch.cuda.is_available() else 'CUDA not available')"` to check PyTorch (should show version 2.4.1 and CUDA status).
