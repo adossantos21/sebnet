@@ -47,7 +47,6 @@ model = dict(
         num_classes=19,
         in_channels=256,
         num_stem_blocks=num_stem_blocks,
-        sbd_head='d_module',
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
