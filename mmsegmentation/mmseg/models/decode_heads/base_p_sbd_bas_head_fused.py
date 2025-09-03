@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, Bag, PModule, DModule
+from mmseg.models.utils import BaseSegHead, Bag, PModule, DModule, CASENet, DFF, BEM
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,8 +15,8 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePDSBDBASHead(BaseDecodeHead):
-    """Baseline + P Branch + D Branch + SBD head for mapping feature to a predefined set
+class BagBaselinePSBDBASHead(BaseDecodeHead):
+    """Baseline + P Branch + SBD head for mapping feature to a predefined set
     of classes (with bag fusion).
 
     Args:
@@ -57,9 +57,7 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
         self.sbd = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
         self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
-        self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
-        self.sbd_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
-        self.sbd_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
+        self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
 
     def forward(self, x):
         """
@@ -77,8 +75,7 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
             temp_p, x_p = self.p_module(x)
             p_supervised = self.p_head(temp_p, self.p_cls_seg)
             temp_d, x_d = self.sbd(x)
-            d_supervised = self.d_head(temp_d, self.d_cls_seg)
-            sbd_supervised = self.sbd_head(temp_d, self.sbd_cls_seg)
+            sbd_supervised = self.d_head(temp_d, self.d_cls_seg)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
@@ -86,13 +83,11 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
                 align_corners=self.align_corners)
             feats = self.fusion(x_p, x[-1], x_d)
             output = self.seg_head(feats, self.cls_seg)
-            return tuple([output, p_supervised, d_supervised, sbd_supervised])
+            return tuple([output, p_supervised, sbd_supervised])
         else:
             if self.eval_edges:
                 temp_d, _ = self.sbd(x)
-                d_output = self.d_head(temp_d, self.d_cls_seg)
-                sbd_output = self.sbd_head(temp_d, self.sbd_cls_seg)
-                output = tuple([d_output, sbd_output])
+                output = self.d_head(temp_d, self.d_cls_seg)
             else:
                 x_p = self.p_module(x)
                 x_d = self.sbd(x)
@@ -109,21 +104,17 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
-        gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
-        ]
         gt_multi_edge_segs = [
             data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
-        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
         gt_multi_edge_segs = torch.stack(gt_multi_edge_segs, dim=0)
-        return gt_sem_segs, gt_edge_segs, gt_multi_edge_segs
+        return gt_sem_segs, gt_multi_edge_segs
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, p_logits, d_logits, sbd_logits = logits
-        sem_label, bd_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits, p_logits, sbd_logits = logits
+        sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
             size=sem_label.shape[2:],
@@ -134,34 +125,26 @@ class BaselinePDSBDBASHead(BaseDecodeHead):
             size=sem_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        d_logits = resize(
-            input=d_logits,
-            size=bd_label.shape[2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
         sbd_logits = resize(
             input=sbd_logits,
             size=bd_multi_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         sem_label = sem_label.squeeze(1)
-        bd_label = bd_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
             p_logits=p_logits,
-            d_logits=d_logits,
             sbd_logits=sbd_logits
         )
         loss = dict()
         loss['loss_sem'] = self.loss_decode[0](seg_logits, sem_label)
         loss['loss_p'] = self.loss_decode[1](p_logits, sem_label)
-        loss['loss_d'] = self.loss_decode[2](d_logits, bd_label)
-        loss['loss_sbd'] = self.loss_decode[3](sbd_logits, bd_multi_label)
+        loss['loss_sbd'] = self.loss_decode[2](sbd_logits, bd_multi_label)
         filler = torch.ones_like(sem_label) * self.ignore_index
         sem_bd_label = torch.where(
-            torch.sigmoid(d_logits[:, 0, :, :]) > 0.8, sem_label, filler)
-        loss['loss_bas'] = self.loss_decode[4](seg_logits, sem_bd_label)
+            torch.sigmoid(torch.max(sbd_logits, dim=1)[0]) > 0.8, sem_label, filler)
+        loss['loss_bas'] = self.loss_decode[3](seg_logits, sem_bd_label)
         loss['acc_seg'] = accuracy(
             seg_logits, sem_label, ignore_index=self.ignore_index)
         return loss, logits

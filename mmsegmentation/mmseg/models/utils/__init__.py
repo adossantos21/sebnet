@@ -22,7 +22,7 @@ from .fusion_modules import (
     PagFM,
     Bag,
     LightBag,
-    PIFusion
+    PIFusion,
 )
 
 from .aux_modules import (
@@ -33,6 +33,10 @@ from .aux_modules import (
     DFF,
     BEM,
     MIMIR,
+    DModule_EarlierLayers,
+    CASENet_EarlierLayers,
+    DFF_EarlierLayers,
+    BEM_EarlierLayers,
 )
 
 __all__ = [
@@ -43,5 +47,6 @@ __all__ = [
     'cross_attn_layer', 'LayerNorm2d', 'MLP', 'BottleneckExp2', 'LayerNorm2dSAN',
     'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
     "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM", "ConvNeXtBlock",
-    "GRN", "build_norm_layer", "BaseSegHead", "MIMIR",
+    "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", "CASENet_EarlierLayers",
+    "DFF_EarlierLayers", "BEM_EarlierLayers", "DModule_EarlierLayers"
 ]

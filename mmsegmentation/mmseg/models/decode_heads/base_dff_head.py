@@ -44,9 +44,10 @@ class BaselineDFFHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         if self.training:
             self.dff = DFF(nclass=self.num_classes)
-        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
@@ -83,7 +84,7 @@ class BaselineDFFHead(BaseDecodeHead):
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
         gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)

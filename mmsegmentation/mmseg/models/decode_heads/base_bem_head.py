@@ -29,8 +29,8 @@ class BaselineBEMHead(BaseDecodeHead):
     """
 
     def __init__(self, 
-                 in_channels=256, 
-                 num_classes=19, 
+                 in_channels: int = 256, 
+                 num_classes: int = 19, 
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
@@ -45,13 +45,14 @@ class BaselineBEMHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
+        self.stride = 1
         if self.training:
             self.bem = BEM(planes=self.in_channels // 4)
-            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
-            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, norm_cfg, act_cfg)
+            self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
+            self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
             self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
             self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(in_channels, in_channels, norm_cfg, act_cfg)
+        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
@@ -90,7 +91,7 @@ class BaselineBEMHead(BaseDecodeHead):
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
         gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)

@@ -47,7 +47,7 @@ class BaselinePDBASHead(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         self.num_stem_blocks = num_stem_blocks
-        self.p_module = PModule(channels=self.in_channels // 4)
+        self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
         self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
         self.fusion = Bag(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         if self.training:

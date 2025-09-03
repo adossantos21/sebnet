@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
-checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_1xb64_in1k/20250713_194653/checkpoints/pretrain01_staged_1xb64_in1k/20250713_194653/epoch_98.pth"
+checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
@@ -21,6 +21,7 @@ data_preprocessor = dict(
     seg_pad_val=255,
     size=crop_size)
 
+num_stem_blocks = 3
 model = dict(
     type='EncoderDecoderWithFeats',
     data_preprocessor=data_preprocessor,
@@ -29,7 +30,7 @@ model = dict(
         # All fields except `type` come from the __init__ method of class `SEBNet`
         in_channels = 3,
         channels = 64,
-        num_stem_blocks = 3,
+        num_stem_blocks = num_stem_blocks,
         num_branch_blocks = 4,
         align_corners = False,
         init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file)),
@@ -45,6 +46,7 @@ model = dict(
         # and you can find them from https://mmpretrain.readthedocs.io/en/latest/api/generated/mmpretrain.models.heads.LinearClsHead.html
         num_classes=19,
         in_channels=256,
+        num_stem_blocks=num_stem_blocks,
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
@@ -55,7 +57,7 @@ model = dict(
                 loss_name='loss_ce'),
             dict(
                 type='BoundaryLoss',
-                loss_weight=20.0,
+                loss_weight=5.0,
                 loss_name='loss_d')
         ]),
     train_cfg=dict(),
@@ -72,12 +74,12 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='GenerateEdge', edge_width=4),
+    dict(type='GenerateEdge', edge_width=2),
     dict(type='PackSegInputs')
 ]
-train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
+train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
 
-iters = 120000
+iters = 160000
 val_interval=1000
 # optimizer
 #optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
@@ -86,7 +88,8 @@ val_interval=1000
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
     type='mmpretrain.GradTrackingOptimWrapper',
-    optimizer=dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005))
+    optimizer=dict(type='SGD', lr=0.01, momentum=0.9, 
+                   weight_decay=0.0005), clip_grad=None)
 
 # The tuning strategy of the learning rate.
 # learning policy
@@ -115,7 +118,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=120001,
+        type='CheckpointHook', by_epoch=False, save_begin=160001,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
@@ -123,7 +126,7 @@ default_hooks = dict(
 custom_hooks = [
     dict(
         initial_grads=True,
-        interval=12000,
+        interval=16000,
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),

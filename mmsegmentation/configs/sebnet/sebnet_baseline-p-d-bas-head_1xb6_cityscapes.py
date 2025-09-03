@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
-checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_1xb64_in1k/20250713_194653/checkpoints/pretrain01_staged_1xb64_in1k/20250713_194653/epoch_98.pth"
+checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
@@ -91,7 +91,7 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
 
-iters = 180000
+iters = 160000
 val_interval=1000
 # optimizer
 #optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
@@ -130,7 +130,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=180001,
+        type='CheckpointHook', by_epoch=False, save_begin=160001,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
@@ -138,7 +138,7 @@ default_hooks = dict(
 custom_hooks = [
     dict(
         initial_grads=True,
-        interval=18000,
+        interval=16000,
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),

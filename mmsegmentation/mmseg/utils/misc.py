@@ -113,6 +113,12 @@ def stack_batch(inputs: List[torch.Tensor],
                 data_sample.gt_depth_map.data = F.pad(
                     gt_depth_map, padding_size, value=seg_pad_val)
                 pad_shape = data_sample.gt_depth_map.shape
+            if 'gt_multi_edge_map' in data_sample:
+                gt_multi_edge_map = data_sample.gt_multi_edge_map.data
+                del data_sample.gt_multi_edge_map.data
+                data_sample.gt_multi_edge_map.data = F.pad(
+                    gt_multi_edge_map, padding_size, value=seg_pad_val)
+                pad_shape = data_sample.gt_multi_edge_map.shape
             data_sample.set_metainfo({
                 'img_shape': tensor.shape[-2:],
                 'pad_shape': pad_shape,

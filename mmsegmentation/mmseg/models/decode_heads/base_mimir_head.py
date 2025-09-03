@@ -75,11 +75,6 @@ class BaselineMIMIRHead(BaseDecodeHead):
             side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
             fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
             output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
-            print(f"side5 shape: {side5.shape}")
-            print(f"fuse shape: {fuse.shape}")
-            print(f"output shape: {output.shape}")
-            import sys
-            sys.exit()
             return tuple([output, side5, fuse])
         else:
             x[-1] = F.interpolate(
@@ -95,7 +90,7 @@ class BaselineMIMIRHead(BaseDecodeHead):
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
         gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
