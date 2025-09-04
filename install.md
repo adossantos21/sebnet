@@ -41,8 +41,8 @@ git clone git@github.com:adossantos21/paper_2.git
 
    Execute the following commands:
     ```
-    chmod +x initialize.sh # Makes initialize.sh an executable
-    ./initialize.sh # Executes initialize.sh, which installs remaining packages for mmpretrain and mmsegmentation
+    chmod +x initialize.sh
+    ./initialize.sh
     ```
     - This will install remaining packages for MMPretrain and MMSegmentation
     - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
@@ -60,8 +60,23 @@ git clone git@github.com:adossantos21/paper_2.git
    python -c "import mmengine; print(mmengine.__version__)"
    python -c "import mmcv; print(mmcv.__version__)"
    ```
+6. **One Small Bug**
 
-6. **Run the Software**:
+   MMEngine as of version `0.10.7`, does not support multi-edge labels. Thus you must make the following change to `miniconda3/envs/venv_sebnet/lib/python3.8/site-packages/mmengine/structures/pixel_data.py`, line 78:
+   ```
+   # Change these lines of code from
+   assert value.ndim in [
+       2, 3
+   ], f'The dim of value must be 2 or 3, but got {value.ndim}'
+
+   # To
+   assert value.ndim in [
+       2, 3, 4
+   ], f'The dim of value must be 2, 3, or 4, but got {value.ndim}'
+   ```
+   A pull request for this change has been created.
+
+8. **Run the Software**:
 
    Follow the usage instructions in [README.md](https://github.com/adossantos21/paper_2/blob/main/README.md).
 
