@@ -1,3 +1,4 @@
+unset DISPLAY
 export CUDA_VISIBLE_DEVICES=3
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce_scratch.py
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce.py
@@ -33,4 +34,4 @@ export CUDA_VISIBLE_DEVICES=3
 #python tools/train.py configs/sebnet/sebnet_baseline-d-sbd-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py
-python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-basWithSBD-head_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-basWithSBD-head_1xb6_cityscapes.py
