@@ -50,7 +50,7 @@ git clone git@github.com:adossantos21/paper_2.git
 
    Run the following to check PyTorch (should show version 2.4.1 and CUDA status).
    ```
-   python -c "import torch; print(f'\n{torch.__version__})"
+   python -c "import torch; print(f'\n{torch.__version__}')"
    python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
    ```
    If CUDA is not available but you expect it to be, ensure your NVIDIA drivers are up to date and match your CUDA toolkit version.
