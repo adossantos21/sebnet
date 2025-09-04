@@ -16,4 +16,9 @@ cd mmsegmentation
 mim install -e .
 cd ..
 
+# Resolve MMCV conflict between mmpretrain and mmsegmentation
+pip uninstall mmcv
+mim install mmengine
+mim install "mmcv>=2.0.0"
+
 echo "Installation complete. You can now use the software seamlessly."
