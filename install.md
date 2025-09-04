@@ -57,8 +57,8 @@ git clone git@github.com:adossantos21/paper_2.git
 
    Run the following to check that MMEngine and MMCV were properly installed:
    ```
-   python -c "import mmengine; print(mmengine.__version__)"
-   python -c "import mmcv; print(mmcv.__version__)"
+   python -c "import mmengine; print(f'\n{mmengine.__version__}')"
+   python -c "import mmcv; print(f'\n{mmcv.__version__}')"
    ```
 6. **One Small Bug**
 
