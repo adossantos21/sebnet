@@ -3,6 +3,73 @@
 ## Overview
 Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs developed for the semantic segmentation task. SEBNet leverages principles from the Semantic Boundary Detection (SBD) task to improve the segmentation quality of a real-time architecture based on PIDNet [[1]](#1). SEBNet also leverages the OTFGT module from [[2]](#2) and pyEdgeEval from [[3]](#3) for SBD peformance improvements and evaluation, respectively.
 
+## Getting Started
+Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md).
+
+### If you wish to simply download the weights and evaluate performance:
+1. Download the weights:
+   ```
+   Pending
+   ```
+
+2. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
+3. Find the corresponding config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
+4. Update <config_file_path> with the path from the previous step, and the checkpoint weights `.pth` file in `./eval.sh`, which should look something like:
+   ```
+   export CUDA_VISIBLE_DEVICES=0
+   python tools/test.py \
+       <config_file_path> \
+       <ckpt.pth>
+   ```
+5. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+   ```
+   conda activate venv_sebnet
+   ```
+6. Run the executable:
+   ```
+   ./eval.sh
+   ```
+### If you wish to repeat the experiments outlined in the Description section:
+**To pretrain a model:**
+1. Navigate to the `mmpretrain/` directory:
+   ```
+   cd mmpretrain/
+   ```
+2. Find the config file path, e.g., `configs/alex_sebnet/pretrain01_tests/pretrain01_staged_1xb64_in1k.py`
+3. Update <config_file_path> with the path from the previous step in `./main.sh`, which should look something like:
+   ```
+   export CUDA_VISIBLE_DEVICES=0
+   python tools/train.py <config_file_path>
+   ```
+4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+   ```
+   conda activate venv_sebnet
+   ```
+5. Run the executable:
+   ```
+   ./main.sh
+   ```
+
+**To finetune a model:**
+1. Navigate to the `mmsegmentation/` directory:
+   ```
+   cd mmsegmentation/
+   ```
+2. Find the config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
+3. Update <config_file_path> with the path from the previous step in `./main.sh`, which should look something like:
+   ```
+   export CUDA_VISIBLE_DEVICES=0
+   python tools/train.py <config_file_path>
+   ```
+4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+   ```
+   conda activate venv_sebnet
+   ```
+5. Run the executable:
+   ```
+   ./main.sh
+   ```
+
 ## Description
 The development of SEBNet was sequential and comprehensive. There are two stages.
 
