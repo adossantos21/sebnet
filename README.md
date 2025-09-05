@@ -4,28 +4,37 @@
 Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs developed for the semantic segmentation task. SEBNet leverages principles from the Semantic Boundary Detection (SBD) task to improve the segmentation quality of a real-time architecture based on PIDNet [[1]](#1). SEBNet also leverages the OTFGT module from [[2]](#2) and pyEdgeEval from [[3]](#3) for SBD peformance improvements and evaluation, respectively.
 
 ## Getting Started
-Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md).
+
+### Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md). This is required.
 
 ### If you wish to simply download the weights and evaluate performance:
 1. Download the weights:
    ```
    Pending
    ```
-
-2. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
-3. Find the corresponding config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
-4. Update <config_file_path> with the path from the previous step, and the checkpoint weights `.pth` file in `./eval.sh`, which should look something like:
+2. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+   ```
+   conda activate venv_sebnet
+   ```
+#### For semantic edge detection (SBD) evaluation
+1. Generate your SBD predictions
+2. Generate your SBD ground truth
+3. Configure `./eval_edgeMetrics.sh`
+4. Run the executable:
+   ```
+   ./eval_edgeMetrics.sh
+   ```
+#### For image classification or semantic segmentation evaluation
+1. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
+2. Find the corresponding config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
+3. Update <config_file_path> with the path from the previous step, and the checkpoint weights `.pth` file in `./eval.sh`, which should look something like:
    ```
    export CUDA_VISIBLE_DEVICES=0
    python tools/test.py \
        <config_file_path> \
        <ckpt.pth>
    ```
-5. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
-   ```
-   conda activate venv_sebnet
-   ```
-6. Run the executable:
+4. Run the executable:
    ```
    ./eval.sh
    ```

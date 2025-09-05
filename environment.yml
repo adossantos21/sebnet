@@ -226,6 +226,7 @@ dependencies:
       - markdown==3.7
       - markdown-it-py==3.0.0
       - mat4py==0.6.0
+      - mat73==0.65
       - matplotlib==3.7.5
       - mdurl==0.1.2
       - mmcv==2.2.0
@@ -244,6 +245,7 @@ dependencies:
       - prettytable==3.11.0
       - pycryptodome==3.23.0
       - pygments==2.19.2
+      - pymatreader==0.0.32
       - pyparsing==3.1.4
       - pyquaternion==0.9.9
       - python-dateutil==2.9.0.post0
@@ -251,6 +253,7 @@ dependencies:
       - regex==2024.11.6
       - requests==2.28.2
       - rich==13.4.2
+      - scikit-image==0.21.0
       - scipy==1.10.1
       - setuptools==60.2.0
       - six==1.17.0
