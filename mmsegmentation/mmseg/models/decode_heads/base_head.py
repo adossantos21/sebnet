@@ -29,7 +29,7 @@ class BaselineHead(BaseDecodeHead):
                  in_channels: int = 256,
                  channels: int = 256,
                  num_classes: int = 19,
-                 norm_cfg: OptConfigType = dict(type='BN'),
+                 norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
         super().__init__(
@@ -134,13 +134,7 @@ class BaselineHead(BaseDecodeHead):
             seg_weight = self.sampler.sample(seg_logits, seg_label)
         else:
             seg_weight = None
-        #print(f"seg_label shape: {seg_label.shape}")
         seg_label = seg_label.squeeze(1)
-        #print(f"torch.argmax(seg_logits, dim=1): {torch.argmax(seg_logits, dim=1)}")
-        #print(f"seg_label shape: {seg_label.shape}")
-        #print(f"seg_logits shape: {seg_logits.shape}")
-        #import sys
-        #sys.exit()
         if not isinstance(self.loss_decode, nn.ModuleList):
             losses_decode = [self.loss_decode]
         else:

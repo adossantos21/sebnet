@@ -11,7 +11,7 @@ from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple
+from typing import Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
@@ -32,8 +32,9 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
     def __init__(self, 
                  in_channels: int = 256, 
                  num_classes: int = 19, 
-                 norm_cfg: OptConfigType = dict(type='BN'),
+                 norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -47,8 +48,8 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         self.stride = 1
-        if self.training:
-            self.casenet = CASENet(nclass=self.num_classes)
+        self.eval_edges = eval_edges
+        self.casenet = CASENet(nclass=self.num_classes)
         self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -73,12 +74,16 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
             output = self.seg_head(x[-1], self.cls_seg)
             return tuple([output, side5, fuse])
         else:
-            x[-1] = F.interpolate(
-                x[-1],
-                size=x[1].shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners)
-            output = self.seg_head(x[-1], self.cls_seg)
+            if self.eval_edges:
+                _, output = self.casenet(x)
+                output = tuple(output)
+            else:
+                x[-1] = F.interpolate(
+                    x[-1],
+                    size=x[1].shape[2:],
+                    mode='bilinear',
+                    align_corners=self.align_corners)
+                output = self.seg_head(x[-1], self.cls_seg)
             return output
 
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
@@ -92,13 +97,13 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
         return gt_sem_segs, gt_edge_segs
 
-    def loss_by_feat(self, seg_logits: List[Tensor],
+    def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        output_logits, side5_logits, fuse_logits = seg_logits
-        sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
-        output_logits = resize(
-            input=output_logits,
-            size=sem_label.shape[2:],
+        seg_logits, side5_logits, fuse_logits = logits
+        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits = resize(
+            input=seg_logits,
+            size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         side5_logits = resize(
@@ -111,17 +116,17 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
             size=bd_multi_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
-        sem_label = sem_label.squeeze(1)
+        seg_label = seg_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
         logits = dict(
-            seg_logits=output_logits,
+            seg_logits=seg_logits,
             side5_logits=side5_logits,
             fuse_logits=fuse_logits
         )
         loss = dict()
-        loss['loss_ce'] = self.loss_decode[0](output_logits, sem_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
         loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
         loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
         loss['acc_seg'] = accuracy(
-            output_logits, sem_label, ignore_index=self.ignore_index)
+            seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

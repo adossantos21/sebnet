@@ -10,7 +10,7 @@ from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple
+from typing import Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
@@ -96,28 +96,28 @@ class BaselinePHead(BaseDecodeHead):
         ]
         return torch.stack(gt_semantic_segs, dim=0)
 
-    def loss_by_feat(self, logits: List[Tensor],
+    def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
         seg_logits, p_logits = logits
-        sem_label = self._stack_batch_gt(batch_data_samples)
+        seg_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
-            size=sem_label.shape[2:],
+            size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         p_logits = resize(
             input=p_logits,
-            size=sem_label.shape[2:],
+            size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        sem_label = sem_label.squeeze(1)
+        seg_label = seg_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
             p_logits=p_logits,
         )
         loss = dict()
-        loss['loss_ce'] = self.loss_decode[0](seg_logits, sem_label)
-        loss['loss_p'] = self.loss_decode[1](p_logits, sem_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
+        loss['loss_seg_p'] = self.loss_decode[1](p_logits, seg_label)
         loss['acc_seg'] = accuracy(
-            seg_logits, sem_label, ignore_index=self.ignore_index)
+            seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

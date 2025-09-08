@@ -18,8 +18,25 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
    ```
 #### For semantic edge detection (SBD) evaluation
 1. Generate your SBD predictions
+    - Configure `generate_cityscapes_preds.sh`
+        - Set the model config file
+        - Set the relevant model's checkpoint
+        - Set the output path for your SBD predictions
+    - Run the executable:
+      ```
+      ./generate_cityscapes_preds.sh
+      ```
 2. Generate your SBD ground truth
-3. Configure `./eval_edgeMetrics.sh`
+    - Your environment will have installed the packages required for the following shell commands.
+    - Configure `generate_cityscapes_gt.sh`
+        - Set the root path of your cityscapes dataset
+        - (Optional) - Set the output path *relative* to the cityscapes dataset root path
+    - Run the executable:
+      ```
+      ./generate_cityscapes_gt.sh
+      ```
+3. Configure `eval_edgeMetrics.sh`
+    - Add `-h` flag to see optional arguments and corresponding descriptions.
 4. Run the executable:
    ```
    ./eval_edgeMetrics.sh
@@ -27,7 +44,7 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 #### For image classification or semantic segmentation evaluation
 1. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
 2. Find the corresponding config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
-3. Update <config_file_path> with the path from the previous step, and the checkpoint weights `.pth` file in `./eval.sh`, which should look something like:
+3. In `./eval.sh`, update <config_file_path> with the path from the previous step. Also, add the checkpoint weights `.pth` file. eval.sh, which should look something like:
    ```
    export CUDA_VISIBLE_DEVICES=0
    python tools/test.py \
