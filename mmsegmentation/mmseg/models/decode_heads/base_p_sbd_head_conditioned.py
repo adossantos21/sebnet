@@ -88,6 +88,7 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
             if self.eval_edges:
                 temp_d, _ = self.sbd(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
+                output = tuple([output])
             else:
                 x_p = self.p_module(x)
                 x[-1] = F.interpolate(
@@ -113,15 +114,15 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
         seg_logits, p_logits, sbd_logits = logits
-        sem_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
-            size=sem_label.shape[2:],
+            size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         p_logits = resize(
             input=p_logits,
-            size=sem_label.shape[2:],
+            size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         sbd_logits = resize(
@@ -129,7 +130,7 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
             size=bd_multi_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
-        sem_label = sem_label.squeeze(1)
+        seg_label = seg_label.squeeze(1)
         bd_multi_label = bd_multi_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
@@ -137,9 +138,9 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
             sbd_logits=sbd_logits
         )
         loss = dict()
-        loss['loss_sem'] = self.loss_decode[0](seg_logits, sem_label)
-        loss['loss_p'] = self.loss_decode[1](p_logits, sem_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
+        loss['loss_seg_p'] = self.loss_decode[1](p_logits, seg_label)
         loss['loss_sbd'] = self.loss_decode[2](sbd_logits, bd_multi_label)
         loss['acc_seg'] = accuracy(
-            seg_logits, sem_label, ignore_index=self.ignore_index)
+            seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

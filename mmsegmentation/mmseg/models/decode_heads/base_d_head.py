@@ -10,7 +10,7 @@ from mmseg.models.utils import resize
 from mmseg.registry import MODELS
 from .decode_head import BaseDecodeHead
 
-from typing import List, Tuple
+from typing import Tuple
 from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
@@ -34,6 +34,7 @@ class BaselineDHead(BaseDecodeHead):
                  num_stem_blocks: int = 3,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -47,11 +48,11 @@ class BaselineDHead(BaseDecodeHead):
         self.in_channels = in_channels
         self.num_classes = num_classes
         self.stride = 1
+        self.eval_edges = eval_edges
         self.num_stem_blocks = num_stem_blocks
-        if self.training:
-            self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
-            self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+        self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
+        self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
@@ -77,13 +78,18 @@ class BaselineDHead(BaseDecodeHead):
             output = self.seg_head(x[-1], self.cls_seg)
             return tuple([output, d_supervised])
         else:
-            x[-1] = F.interpolate(
-                x[-1],
-                size=x[1].shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners
-            )
-            output = self.seg_head(x[-1], self.cls_seg)
+            if self.eval_edges:
+                temp_d, _ = self.d_module(x)
+                output = self.d_head(temp_d, self.d_cls_seg)
+                output = tuple([output])
+            else:
+                x[-1] = F.interpolate(
+                    x[-1],
+                    size=x[1].shape[2:],
+                    mode='bilinear',
+                    align_corners=self.align_corners
+                )
+                output = self.seg_head(x[-1], self.cls_seg)
             return output
 
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
@@ -118,7 +124,7 @@ class BaselineDHead(BaseDecodeHead):
             d_logits=d_logits,
         )
         loss = dict()
-        loss['loss_ce'] = self.loss_decode[0](seg_logits, sem_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, sem_label)
         loss['loss_d'] = self.loss_decode[1](d_logits, bd_label)
         loss['acc_seg'] = accuracy(
             seg_logits, sem_label, ignore_index=self.ignore_index)
