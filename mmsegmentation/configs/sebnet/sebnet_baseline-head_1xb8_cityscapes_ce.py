@@ -70,7 +70,7 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=8, dataset=dict(pipeline=train_pipeline))
 
-iters = 120000
+iters = 180000
 val_interval=1000
 
 optim_wrapper = dict(
@@ -105,7 +105,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=120001, save_last=False,
+        type='CheckpointHook', by_epoch=False, save_begin=180001, save_last=False,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
@@ -113,7 +113,7 @@ default_hooks = dict(
 custom_hooks = [
     dict(
         initial_grads=True,
-        interval=12000,
+        interval=18000,
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
