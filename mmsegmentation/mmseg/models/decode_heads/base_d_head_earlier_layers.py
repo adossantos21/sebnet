@@ -82,7 +82,7 @@ class BaselineDHeadEarlierLayers(BaseDecodeHead):
             if self.eval_edges:
                 temp_d, _ = self.d_module(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
-                output = tuple(output)
+                output = tuple([output])
             else:
                 x[-1] = F.interpolate(
                     x[-1],

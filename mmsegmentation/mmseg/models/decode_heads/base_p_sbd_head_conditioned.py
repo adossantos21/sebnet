@@ -88,7 +88,7 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
             if self.eval_edges:
                 temp_d, _ = self.sbd(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
-                output = tuple(output)
+                output = tuple([output])
             else:
                 x_p = self.p_module(x)
                 x[-1] = F.interpolate(

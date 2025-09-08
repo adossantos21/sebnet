@@ -88,7 +88,7 @@ class BaselinePDBASHead(BaseDecodeHead):
             if self.eval_edges:
                 temp_d, _ = self.d_module(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
-                output = tuple(output)
+                output = tuple([output])
             else:
                 x_p = self.p_module(x)
                 x_d = self.d_module(x)

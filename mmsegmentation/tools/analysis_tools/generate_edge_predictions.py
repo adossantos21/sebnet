@@ -124,14 +124,21 @@ def main():
             
             # Get edge logits from decode head forward (assumes eval_edges=True)
             logits_list = model.decode_head.forward(feats)  # Shape: (N, C, H, W)
-            
+
             for logits_idx, logits in enumerate(logits_list):
 
                 # Apply sigmoid for multi-label probabilities
                 probs = torch.sigmoid(logits)
 
                 # Correspond probabilities shape with ground truth shape
-                _, _, h, w = probs.shape
+                ndim = probs.ndim
+                if ndim == 4:
+                    _, _, h, w = probs.shape
+                elif ndim == 3:
+                    _, h, w = probs.shape
+                else: 
+                    raise ValueError(f"Output should have 3 or 4 dimensions; instead, got {ndim}")
+                
                 if ori_h != h or ori_w != w:
                     probs = F.interpolate(probs, size=(ori_h, ori_w),
                                         mode='bilinear', align_corners=True).cpu().numpy()
@@ -144,18 +151,34 @@ def main():
                 sparse_pred_name = f'sbd_{logits_idx}'
                 
                 for pred, name in zip(probs, batch_names):
-                    for idx_cls, pred_cls in enumerate(pred):
-                        category_dir = f"class_{str(idx_cls+1).zfill(3)}"
-                        out_dir = os.path.join(cfg.work_dir, sparse_pred_name, category_dir)
+                    if ndim == 4:
+                        for idx_cls, pred_cls in enumerate(pred):
+                            category_dir = f"class_{str(idx_cls+1).zfill(3)}"
+                            out_dir = os.path.join(cfg.work_dir, sparse_pred_name, category_dir)
+                            os.makedirs(out_dir, exist_ok=True)
+                            
+                            # Adapt basename parsing (for Cityscapes, split on image suffix)
+                            basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
+                            
+                            # Scale and save as uint16 grayscale
+                            scaled_pred = (pred_cls * 65535).astype(np.uint16)
+                            img = Image.fromarray(scaled_pred, mode='I;16')
+                            img.save(os.path.join(out_dir, f"{basename}_SBD.png"))
+                    elif ndim == 3:
+                        out_dir = os.path.join(cfg.work_dir, sparse_pred_name, f"class_000")
                         os.makedirs(out_dir, exist_ok=True)
-                        
+
                         # Adapt basename parsing (for Cityscapes, split on image suffix)
                         basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
                         
                         # Scale and save as uint16 grayscale
-                        scaled_pred = (pred_cls * 65535).astype(np.uint16)
+                        scaled_pred = (pred * 65535).astype(np.uint16)
                         img = Image.fromarray(scaled_pred, mode='I;16')
                         img.save(os.path.join(out_dir, f"{basename}_SBD.png"))
+
+                    else:
+                        raise ValueError(f"Output should have 3 or 4 dimensions; instead, got {ndim}")
+
 
 if __name__ == "__main__":
     main()

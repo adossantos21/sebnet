@@ -76,7 +76,7 @@ class BaselineCASENetHeadEarlierLayers(BaseDecodeHead):
         else:
             if self.eval_edges:
                 _, output = self.casenet(x)
-                output = tuple(output)
+                output = tuple([output])
             else:
                 x[-1] = F.interpolate(
                     x[-1],

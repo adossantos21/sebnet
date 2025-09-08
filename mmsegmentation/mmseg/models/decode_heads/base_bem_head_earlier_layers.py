@@ -83,7 +83,7 @@ class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
             if self.eval_edges:
                 _, fuse = self.bem(x)
                 output = self.fuse_head(fuse, self.fuse_cls_seg)
-                output = tuple(output)
+                output = tuple([output])
             else:
                 x[-1] = F.interpolate(
                     x[-1],
