@@ -1,8 +1,8 @@
 unset DISPLAY
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=1
 
-#python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py
-python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes.py
+#python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-fused_1xb6_cityscapes.py
+#python tools/train.py configs/pidnet/pidnet-l_2xb6-120k_1024x1024-cityscapes.py
 
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce_scratch.py
 #python tools/train.py configs/sebnet/sebnet_baseline-head_1xb6_cityscapes_ce.py
@@ -23,7 +23,7 @@ python tools/train.py configs/sebnet/sebnet_baseline-p-sbd-bas-head-conditioned_
 #python tools/train.py configs/sebnet/sebnet_baseline-p-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-d-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-head_1xb6_cityscapes.py
-#python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
+python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
 
 #python tools/train.py configs/sebnet/sebnet_baseline-d-head-earlier-layers_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-casenet-head-earlier-layers_1xb6_cityscapes.py
