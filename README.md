@@ -9,10 +9,13 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 
 ### If you wish to simply download the weights and evaluate performance:
 1. Download the weights:
-   ```
-   Pending
-   ```
-2. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+   **Without Mapillary Pre-training:**
+   | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
+   |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
+   | BaselinePDSBDBASHead            | [81.0](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/<your-username>/<your-repo>/raw/main/largefile.ext) |  31.1 |
+   | ConditionalBaselinePSBDBASHead  | [80.7](https://github.com/<your-username>/<your-repo>/raw/main/otherfile.ext) | [Pending](https://github.com/<your-username>/<your-repo>/raw/main/otherfile.ext) |  35.4 |
+   
+3. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
    ```
    conda activate venv_sebnet
    ```
