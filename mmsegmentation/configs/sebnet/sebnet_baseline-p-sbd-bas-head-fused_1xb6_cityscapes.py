@@ -93,7 +93,7 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
 
-iters = 160000
+iters = 240064 # formerly, 160000
 val_interval=1000
 # optimizer
 #optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
