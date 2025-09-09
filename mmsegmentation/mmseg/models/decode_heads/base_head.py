@@ -43,7 +43,8 @@ class BaselineHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.seg_head = BaseSegHead(in_channels, channels, norm_cfg, act_cfg)
+        self.stride = 1
+        self.seg_head = BaseSegHead(in_channels, channels, self.stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
