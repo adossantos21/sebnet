@@ -17,7 +17,11 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
    conda activate venv_sebnet
    ```
 #### For semantic edge detection (SBD) evaluation
-1. Generate your SBD predictions
+1. Enter the `mmsegmentation` directory:
+   ```
+   cd mmsegmentation/
+   ```
+2. Generate your SBD predictions
     - Configure `generate_cityscapes_preds.sh`
         - Set the model config file
         - Set the relevant model's checkpoint
@@ -26,7 +30,7 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
       ```
       ./generate_cityscapes_preds.sh
       ```
-2. Generate your SBD ground truth
+3. Generate your SBD ground truth
     - Your environment will have installed the packages required for the following shell commands.
     - Configure `generate_cityscapes_gt.sh`
         - Set the root path of your cityscapes dataset
@@ -35,9 +39,13 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
       ```
       ./generate_cityscapes_gt.sh
       ```
-3. Configure `eval_edgeMetrics.sh`
+4. Navigate to the parent directory
+   ```
+   cd ../
+   ```
+5. Configure `eval_edgeMetrics.sh`
     - Add `-h` flag to see optional arguments and corresponding descriptions.
-4. Run the executable:
+6. Run the executable:
    ```
    ./eval_edgeMetrics.sh
    ```

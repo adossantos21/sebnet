@@ -46,6 +46,7 @@ git clone git@github.com:adossantos21/paper_2.git
     ```
     - This will install remaining packages for MMPretrain and MMSegmentation
     - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
+    - Lastly, it will install the forked py-edge-eval from adossantos21 as a package, facilitating edge metric calculations
 5. **Verify Installation**:
 
    Run the following to check PyTorch (should show version 2.4.1 and CUDA status).
