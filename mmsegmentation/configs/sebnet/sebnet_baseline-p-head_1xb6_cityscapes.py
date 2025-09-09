@@ -54,14 +54,14 @@ model = dict(
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
-                loss_name='loss_ce'),
+                loss_name='loss_seg'),
             dict(
                 type='OhemCrossEntropy',
                 thres=0.9,
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=0.4,
-                loss_name='loss_p')
+                loss_name='loss_seg_p')
         ]),
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
@@ -81,11 +81,8 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
 
-iters = 160000
+iters = 240000
 val_interval=1000
-# optimizer
-#optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
-#optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
@@ -120,7 +117,7 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, save_begin=160001,
+        type='CheckpointHook', by_epoch=False, save_begin=240001,
         interval=val_interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
@@ -128,7 +125,7 @@ default_hooks = dict(
 custom_hooks = [
     dict(
         initial_grads=True,
-        interval=16000,
+        interval=24000,
         priority='HIGHEST',
         show_plot=False,
         type='mmpretrain.GradFlowVisualizationHook'),
