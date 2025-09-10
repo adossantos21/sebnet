@@ -125,26 +125,27 @@ Next, a decoder is attached for the downstream semantic segmentation task. A bas
 5.  **Ablation 05** - Baseline + DFF SBD Head, Edge Width 2, SBD Loss Weight 5.0
 6.  **Ablation 06** - Baseline + BEM SBD Head, Edge Width 2, SBD Loss Weight 5.0
 7.  **Ablation 07** - Baseline + D Multi-Label SBD Head, Edge Width 2, SBD Loss Weight 5.0
-8.  **Ablation 08** - Baseline + CASENet Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-9.  **Ablation 09** - Baseline + DFF Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-10. **Ablation 10** - Baseline + BEM Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-11. **Ablation 11** - Baseline + D Multi-Label Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-12. **Ablation 12** - Baseline + SBD Head, Edge Width 1, SBD Loss Weight 5.0
-13. **Ablation 13** - Baseline + SBD Head, Edge Width 4, SBD Loss Weight 5.0
-14. **Ablation 14** - Baseline + SBD Head, Edge Width 8, SBD Loss Weight 5.0
-15. **Ablation 15** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 1.0
-16. **Ablation 16** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 10.0
-17. **Ablation 17** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 20.0
-18. **Ablation 18** - Baseline + P Head + D Head
-19. **Ablation 19** - Baseline + D Head + SBD Head
-20. **Ablation 20** - Baseline + P Head + SBD Head (Conditioning)
-21. **Ablation 21** - Baseline + P Head + SBD Head (Fusion)
-22. **Ablation 22** - Baseline + P Head + SBD Head + BAS Loss (Conditioning)
-23. **Ablation 23** - Baseline + P Head + SBD Head + BAS Loss (Fusion)
-24. **Ablation 24** - Baseline + P Head + D Head + BAS Loss (PIDNet)
-25. **Ablation 25** - Baseline + P Head + D Head + SBD Head
-26. **Ablation 26** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
-27. **Ablation 27** - Best Model + Mapillary Pre-training
+8.  **Ablation 08** - Baseline + D Earlier Layers Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
+9.  **Ablation 09** - Baseline + CASENet Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+10. **Ablation 10** - Baseline + DFF Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+11. **Ablation 11** - Baseline + BEM Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+12. **Ablation 12** - Baseline + D Multi-Label Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+13. **Ablation 13** - Baseline + SBD Head, Edge Width 1, SBD Loss Weight 5.0
+14. **Ablation 14** - Baseline + SBD Head, Edge Width 4, SBD Loss Weight 5.0
+15. **Ablation 15** - Baseline + SBD Head, Edge Width 8, SBD Loss Weight 5.0
+16. **Ablation 16** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 1.0
+17. **Ablation 17** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 10.0
+18. **Ablation 18** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 20.0
+19. **Ablation 19** - Baseline + P Head + D Head
+20. **Ablation 20** - Baseline + D Head + SBD Head
+21. **Ablation 21** - Baseline + P Head + SBD Head (Conditioning)
+22. **Ablation 22** - Baseline + P Head + SBD Head (Fusion)
+23. **Ablation 23** - Baseline + P Head + SBD Head + BAS Loss (Conditioning)
+24. **Ablation 24** - Baseline + P Head + SBD Head + BAS Loss (Fusion)
+25. **Ablation 25** - Baseline + P Head + D Head + BAS Loss (PIDNet)
+26. **Ablation 26** - Baseline + P Head + D Head + SBD Head
+27. **Ablation 27** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
+28. **Ablation 28** - Best Model + Mapillary Pre-training
 
 ## Results
 Results are pending. The target date for segmentation results is September 18th, 2025. The target date for boundary results is October 10th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
