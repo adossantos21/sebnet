@@ -88,7 +88,7 @@ train_dataloader = dict(batch_size=6, dataset=dict(data_root=data_root, pipeline
 val_dataloader = dict(batch_size=1, dataset=dict(data_root=data_root))
 test_dataloader = val_dataloader
 
-iters = 360000
+iters = 480000
 val_interval=1000
 
 optim_wrapper = dict(
