@@ -113,9 +113,8 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 The development of SEBNet was sequential and comprehensive. There are two stages.
 
 ### Stage 1 - Pre-training
-To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDNet. Two variations of the backbone are pre-trained on the ImageNet Dataset: 
-1. The first backbone is trained traditionally, it is the vanilla backbone.
-2. The second backbone is trained with an attached KoLeo Regularizer for better feature discrimination between similar features.
+To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDNet: 
+1. The vanilla backbone is trained on ImageNet-1K traditionally.
 
 ### Stage 2 - Finetuning
 Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 9 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
