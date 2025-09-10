@@ -123,9 +123,9 @@ def main():
             feats = model.extract_feat(data['inputs'])
             
             # Get edge logits from decode head forward (assumes eval_edges=True)
-            logits_list = model.decode_head.forward(feats)  # Shape: (N, C, H, W)
+            logits_tuple = model.decode_head.forward(feats)  # Shape: (N, C, H, W)
 
-            for logits_idx, logits in enumerate(logits_list):
+            for logits_idx, logits in enumerate(logits_tuple):
 
                 # Apply sigmoid for multi-label probabilities
                 probs = torch.sigmoid(logits)
