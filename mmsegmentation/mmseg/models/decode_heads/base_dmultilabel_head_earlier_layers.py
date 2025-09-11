@@ -51,7 +51,7 @@ class BaselineDMultiLabelHeadEarlierLayers(BaseDecodeHead):
         self.stride = 2
         self.num_stem_blocks = num_stem_blocks
         self.eval_edges = eval_edges
-        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
         self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
         self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)

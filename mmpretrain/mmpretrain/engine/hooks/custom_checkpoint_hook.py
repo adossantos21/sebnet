@@ -42,11 +42,11 @@ class CustomCheckpointHook(CheckpointHook):
         # `self.out_dir` is set so the final `self.out_dir` is the
         # concatenation of `self.out_dir` and the last level directory of
         # `runner.work_dir` and `runner._log_dir`
-        if self.out_dir != runner._log_dir:
-            basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-            date = osp.basename(runner._log_dir.rstrip(osp.sep))
-            self.out_dir = self.file_backend.join_path(
-                self.out_dir, basename, date)  # type: ignore  # noqa: E501
+        #if self.out_dir != runner._log_dir:
+        #    basename = osp.basename(runner.work_dir.rstrip(osp.sep))
+        #    date = osp.basename(runner._log_dir.rstrip(osp.sep))
+        #    self.out_dir = self.file_backend.join_path(
+        #        self.out_dir, basename, date)  # type: ignore  # noqa: E501
 
         runner.logger.info(f'Checkpoints will be saved to {self.out_dir}.')
 
