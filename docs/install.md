@@ -1,3 +1,6 @@
+# Return to README.md
+[README.md](https://github.com/adossantos21/paper_2/blob/main/README.md)
+
 # Installation Instructions
 
 This guide explains how to set up the environment and dependencies required to run the software. The setup uses Conda for reproducibility, as it handles both Conda- and pip-installed packages.
