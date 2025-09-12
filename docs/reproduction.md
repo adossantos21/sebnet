@@ -1,3 +1,6 @@
+### Return to README.md
+[README.md](../README.md)
+
 ### Repeating the experiments outlined in the Description section:
 **To pretrain a model:**
 1. Navigate to the `mmpretrain/` directory:
