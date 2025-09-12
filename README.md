@@ -5,7 +5,7 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 
 ## Installation
 
-Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/docs/install.md). **This step is required.**
+Install dependencies by following [install.md](docs/install.md). **This step is required.**
 
 ## Quick Evaluation
 Download weights from the table below and follow [evaluate.md](docs/evaluate.md) for detailed steps.
