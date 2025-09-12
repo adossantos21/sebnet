@@ -22,6 +22,6 @@ mim install mmengine
 mim install "mmcv>=2.0.0"
 
 # Install py-edge-eval forked from adossantos21 - this version is packaged.
-pip install git+ssh://git@github.com/adossantos21/py-edge-eval.git@fix-csa_add-hed-support_add-parser-args
+pip install git+ssh://git@github.com/adossantos21/py-edge-eval.git@sebnet
 
 echo "Installation complete. You can now use the software seamlessly."
