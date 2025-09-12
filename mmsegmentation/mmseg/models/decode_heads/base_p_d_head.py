@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 from mmseg.models.utils import BaseSegHead, PModule, Bag
-#from mmseg.models.utils import DModule
-from mmseg.models.utils import DModule_EarlierLayers as DModule
+from mmseg.models.utils import DModule
+#from mmseg.models.utils import DModule_EarlierLayers as DModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,7 +53,7 @@ class BaselinePDHead(BaseDecodeHead):
         self.stride = 1
         self.eval_edges = eval_edges
         self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+        self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
         self.fusion = Bag(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
         self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg)

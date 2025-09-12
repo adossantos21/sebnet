@@ -480,11 +480,13 @@ class DModule_EarlierLayers(CustomBaseModule):
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(init_cfg)
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
+        self.eval_edges = eval_edges
 
         self.relu = nn.ReLU()
 
@@ -582,12 +584,12 @@ class DModule_EarlierLayers(CustomBaseModule):
             size=[h_out, w_out],
             mode='bilinear',
             align_corners=self.align_corners)
-        if self.training:
+        if self.training or self.eval_edges:
             temp_d = x_d.clone()
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-        return tuple([temp_d, x_d]) if self.training else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
 
 class CASENet_EarlierLayers(CustomBaseModule):
     '''

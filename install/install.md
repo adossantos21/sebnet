@@ -1,3 +1,6 @@
+# Return to README.md
+[README.md](../README.md)
+
 # Installation Instructions
 
 This guide explains how to set up the environment and dependencies required to run the software. The setup uses Conda for reproducibility, as it handles both Conda- and pip-installed packages.
@@ -26,7 +29,7 @@ git clone git@github.com:adossantos21/paper_2.git
 
 2. **Create the environment:**
    ```
-   conda env create -f environment.yml
+   conda env create -f install/environment.yml
    ```
    - This will create an environment named `venv_sebnet` with Python 3.8 and all dependencies.
    - If you want a different name, use `conda env create -f environment.yml -n your-env-name`.
@@ -41,8 +44,8 @@ git clone git@github.com:adossantos21/paper_2.git
 
    Execute the following commands:
     ```
-    chmod +x initialize.sh
-    ./initialize.sh
+    chmod +x install/initialize.sh
+    ./install/initialize.sh
     ```
     - This will install remaining packages for MMPretrain and MMSegmentation
     - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
