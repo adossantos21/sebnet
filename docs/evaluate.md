@@ -1,5 +1,5 @@
 ### Return to README.md
-[README.md](https://github.com/adossantos21/paper_2/blob/main/README.md)
+[README.md](../README.md)
 
 ### To download the weights and evaluate performance:
 1. Download the weights:
