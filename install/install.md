@@ -18,13 +18,13 @@ This guide explains how to set up the environment and dependencies required to r
 
 ### **Clone the Repository**
 ```
-git clone git@github.com:adossantos21/paper_2.git
+git clone git@github.com:adossantos21/sebnet.git
 ```
 ### **Setup the Conda Environment**
 
 1. **Launch a terminal and enter the current directory:**
    ```
-   cd paper_2
+   cd sebnet/
    ```
 
 2. **Create the environment:**
@@ -82,7 +82,7 @@ git clone git@github.com:adossantos21/paper_2.git
 
 8. **Run the Software**:
 
-   Follow the usage instructions in [README.md](https://github.com/adossantos21/paper_2/blob/main/README.md).
+   Follow the usage instructions in [README.md](../README.md).
 
 ## Hardware-Specific Adjustments
 
