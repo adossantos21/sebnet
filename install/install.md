@@ -11,6 +11,10 @@ This guide explains how to set up the environment and dependencies required to r
 - **Git**: Ensure Git is installed to clone the repository.
 - **Hardware/Drivers**: 
   - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup uses CUDA Toolkit 12.4. Check your CUDA version with `nvcc --version` or `nvidia-smi`.
+  - CUDA Toolkit must be installed globally for MMCV and MMSegmentation to build successfully:
+
+    [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive)
+
   - If you don't have a compatible GPU, you can adjust for CPU-only mode (see "Hardware-Specific Adjustments" below).
 - **Operating System**: Tested on Linux (x86_64). May work on Windows/macOS with adjustments, but not guaranteed.
 
@@ -29,16 +33,20 @@ git clone git@github.com:adossantos21/sebnet.git
 
 2. **Create the environment:**
    ```
-   conda env create -f install/environment.yml
+   conda create -n venv_sebnet python=3.8 -y
    ```
-   - This will create an environment named `venv_sebnet` with Python 3.8 and all dependencies.
-   - If you want a different name, use `conda env create -f environment.yml -n your-env-name`.
-   - The process may take several minutes, as it downloads and installs packages from channels like `pytorch`, `nvidia`, `conda-forge`, and `defaults`.
-   - If you encounter solver errors (e.g., package conflicts), try running `conda env create -f environment.yml --no-builds` to ignore specific build strings, or update Conda with `conda update conda`.
-
 3. **Activate the Environment:**
    ```
    conda activate venv_sebnet
+   ```
+4. **Install PyTorch**
+
+   See the [PyTorch Archive](https://pytorch.org/get-started/previous-versions/) for the PyTorch version you want. This project was built on PyTorch 2.4.1 and supports CUDA Toolkit 12.1 and CUDA Toolkit 12.4.
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+   ```
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
    ```
 4. **Initialize the Repository:**
 
