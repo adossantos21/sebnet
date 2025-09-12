@@ -112,12 +112,12 @@ python tools/analysis_tools/generate_edge_predictions.py \
 python tools/analysis_tools/generate_edge_predictions.py \
     configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py \
     SBD/ablation27/ckpt/160K/best_mIoU.pth \
-    SBD/ablation26/preds/160K/
+    SBD/ablation27/preds/160K/
 
 python tools/analysis_tools/generate_edge_predictions.py \
     configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py \
     SBD/ablation27/ckpt/240K/best_mIoU.pth \
-    SBD/ablation26/preds/240K/  
+    SBD/ablation27/preds/240K/  
 
 python tools/analysis_tools/generate_edge_predictions.py \
     configs/sebnet/sebnet_baseline-bem-head-earlier-layers_1xb6_cityscapes.py \
