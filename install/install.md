@@ -67,10 +67,12 @@ git clone git@github.com:adossantos21/sebnet.git
    ```
    If CUDA is not available but you expect it to be, ensure your NVIDIA drivers are up to date and match your CUDA toolkit version.
 
-   Run the following to check that MMEngine and MMCV were properly installed:
+   Run the following to check that MMEngine, MMCV, MMPretrain, and MMSeg were properly installed:
    ```
    python -c "import mmengine; print(f'\nMMEngine Version: {mmengine.__version__}')"
    python -c "import mmcv; print(f'\nMMCV Version: {mmcv.__version__}')"
+   python -c "import mmpretrain; print(f'\nMMPretrain Version: {mmpretrain.__version__}')"
+   python -c "import mmseg; print(f'\nMMSeg Version: {mmseg.__version__}')"
    ```
 6. **One Small Bug**
 
