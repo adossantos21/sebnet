@@ -3,111 +3,22 @@
 ## Overview
 Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs developed for the semantic segmentation task. SEBNet leverages principles from the Semantic Boundary Detection (SBD) task to improve the segmentation quality of a real-time architecture based on PIDNet [[1]](#1). SEBNet also leverages the OTFGT module from [[2]](#2) and pyEdgeEval from [[3]](#3) for SBD peformance improvements and evaluation, respectively.
 
-## Getting Started
+## Installation
 
-### Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md). This is required.
+Install dependencies by following [install.md](https://github.com/adossantos21/paper_2/blob/main/docs/install.md). **This step is required.**
 
-### If you wish to simply download the weights and evaluate performance:
-1. Download the weights:
+## Quick Evaluation
+Download weights from the table below and follow [evaluate.md](docs/evaluate.md) for detailed steps.
 
-   **Without Mapillary Pre-training:**
+**Without Mapillary Pre-training:**
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
-   | BaselinePDSBDBASHead            | [81.1](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/<your-username>/<your-repo>/raw/main/largefile.ext) |  31.1 |
-   | ConditionalBaselinePSBDBASHead  | [80.7](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/<your-username>/<your-repo>/raw/main/otherfile.ext) |  35.4 |
+   | BaselinePDSBDBASHead            | [81.1](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  31.1 |
+   | ConditionalBaselinePSBDBASHead  | [80.7](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  35.4 |
    | BaselinePDBASHead (PIDNet, Ours)      | [80.5](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/checkpoints/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/best_mIoU.pth)                              | [Pending](https://github.com/adossantos21/paper_2)                         |  31.1 |
-   
-3. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
-   ```
-   conda activate venv_sebnet
-   ```
-#### For semantic edge detection (SBD) evaluation
-1. Enter the `mmsegmentation` directory:
-   ```
-   cd mmsegmentation/
-   ```
-2. Generate your SBD predictions
-    - Configure `generate_cityscapes_preds.sh`
-        - Set the model config file
-        - Set the relevant model's checkpoint
-        - Set the output path for your SBD predictions
-    - Run the executable:
-      ```
-      ./generate_cityscapes_preds.sh
-      ```
-3. Generate your SBD ground truth
-    - Your environment will have installed the packages required for the following shell commands.
-    - Configure `generate_cityscapes_gt.sh`
-        - Set the root path of your cityscapes dataset
-        - (Optional) - Set the output path *relative* to the cityscapes dataset root path
-    - Run the executable:
-      ```
-      ./generate_cityscapes_gt.sh
-      ```
-4. Navigate to the parent directory
-   ```
-   cd ../
-   ```
-5. Configure `eval_edgeMetrics.sh`
-    - Add `-h` flag to see optional arguments and corresponding descriptions.
-6. Run the executable:
-   ```
-   ./eval_edgeMetrics.sh
-   ```
-#### For image classification or semantic segmentation evaluation
-1. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
-2. Find the corresponding config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
-3. In `./eval.sh`, update <config_file_path> with the path from the previous step. Also, add the checkpoint weights `.pth` file. eval.sh, which should look something like:
-   ```
-   export CUDA_VISIBLE_DEVICES=0
-   python tools/test.py \
-       <config_file_path> \
-       <ckpt.pth>
-   ```
-4. Run the executable:
-   ```
-   ./eval.sh
-   ```
-### If you wish to repeat the experiments outlined in the Description section:
-**To pretrain a model:**
-1. Navigate to the `mmpretrain/` directory:
-   ```
-   cd mmpretrain/
-   ```
-2. Find the config file path, e.g., `configs/alex_sebnet/pretrain01_tests/pretrain01_staged_1xb64_in1k.py`
-3. Update <config_file_path> with the path from the previous step in `./main.sh`, which should look something like:
-   ```
-   export CUDA_VISIBLE_DEVICES=0
-   python tools/train.py <config_file_path>
-   ```
-4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
-   ```
-   conda activate venv_sebnet
-   ```
-5. Run the executable:
-   ```
-   ./main.sh
-   ```
 
-**To finetune a model:**
-1. Navigate to the `mmsegmentation/` directory:
-   ```
-   cd mmsegmentation/
-   ```
-2. Find the config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
-3. Update <config_file_path> with the path from the previous step in `./main.sh`, which should look something like:
-   ```
-   export CUDA_VISIBLE_DEVICES=0
-   python tools/train.py <config_file_path>
-   ```
-4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
-   ```
-   conda activate venv_sebnet
-   ```
-5. Run the executable:
-   ```
-   ./main.sh
-   ```
+## Reproducing Experiments / Training your own models
+For pre-training and fine-tuning ablations, see [reproduction.md](docs/reproduction.md).
 
 ## Description
 The development of SEBNet was sequential and comprehensive. There are two stages.
