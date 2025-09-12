@@ -13,7 +13,7 @@
    export CUDA_VISIBLE_DEVICES=0
    python tools/train.py <config_file_path>
    ```
-4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+4. Activate the conda environment you created from [install.md](../install/install.md):
    ```
    conda activate venv_sebnet
    ```
@@ -33,7 +33,7 @@
    export CUDA_VISIBLE_DEVICES=0
    python tools/train.py <config_file_path>
    ```
-4. Activate the conda environment you created from [install.md](https://github.com/adossantos21/paper_2/blob/main/install.md):
+4. Activate the conda environment you created from [install.md](../install/install.md):
    ```
    conda activate venv_sebnet
    ```
