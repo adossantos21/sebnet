@@ -1,6 +1,6 @@
-# Return to README.md
+# Return to install.md
 
-[README.md](../README.md)
+[install.md](../install/install.md)
 
 # Instructions for Downloading and Installing CUDA Toolkit 12.1 or 12.4 on Ubuntu 20.04
 
