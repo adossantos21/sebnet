@@ -10,11 +10,10 @@ This guide explains how to set up the environment and dependencies required to r
 - **Conda**: Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution) if you don't have it already. Miniconda is recommended for a lighter installation.
 - **Git**: Ensure Git is installed to clone the repository.
 - **Hardware/Drivers**: 
-  - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup uses CUDA Toolkit 12.4. Check your CUDA version with `nvcc --version` or `nvidia-smi`.
+  - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup used CUDA Toolkit 12.1 and 12.4 (on different machines). Check your CUDA version with `nvcc --version` or `nvidia-smi`.
   - CUDA Toolkit must be installed globally for MMCV and MMSegmentation to build successfully:
-
-    [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive)
-
+    - You can download and install the toolkit yourself via [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive).
+    - Or you can follow the custom guide provided [here](../docs/cuda_toolkit.md) *(Recommended for Ubuntu 18.04, 20.04, 22.04)*
   - If you don't have a compatible GPU, you can adjust for CPU-only mode (see "Hardware-Specific Adjustments" below).
 - **Operating System**: Tested on Linux (x86_64). May work on Windows/macOS with adjustments, but not guaranteed.
 
