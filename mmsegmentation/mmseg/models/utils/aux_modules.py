@@ -584,7 +584,7 @@ class DModule_EarlierLayers(CustomBaseModule):
             size=[h_out, w_out],
             mode='bilinear',
             align_corners=self.align_corners)
-        if self.training:
+        if self.training or self.eval_edges:
             temp_d = x_d.clone()
 
         # stage 5

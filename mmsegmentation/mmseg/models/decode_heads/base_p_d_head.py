@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 from mmseg.models.utils import BaseSegHead, PModule, Bag
-#from mmseg.models.utils import DModule
-from mmseg.models.utils import DModule_EarlierLayers as DModule
+from mmseg.models.utils import DModule
+#from mmseg.models.utils import DModule_EarlierLayers as DModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

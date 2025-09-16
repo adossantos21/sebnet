@@ -1,3 +1,6 @@
+# Return to README.md
+[README.md](../README.md)
+
 # Installation Instructions
 
 This guide explains how to set up the environment and dependencies required to run the software. The setup uses Conda for reproducibility, as it handles both Conda- and pip-installed packages.
@@ -6,43 +9,51 @@ This guide explains how to set up the environment and dependencies required to r
 
 - **Conda**: Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution) if you don't have it already. Miniconda is recommended for a lighter installation.
 - **Git**: Ensure Git is installed to clone the repository.
+- **Operating System and Architecture**: Tested on Linux (x86_64). May work on Windows/macOS with adjustments, but not guaranteed.
+- **Distribution**: Ubuntu 20.04
 - **Hardware/Drivers**: 
-  - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup uses CUDA Toolkit 12.4. Check your CUDA version with `nvcc --version` or `nvidia-smi`.
+  - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup used CUDA Toolkit 12.1 and 12.4 (on different machines). Check your CUDA version with `nvcc --version` or `nvidia-smi`.
+  - CUDA Toolkit must be installed globally for MMCV and MMSegmentation to build successfully:
+    - You can download and install the toolkit yourself via [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive).
+    - Or you can follow the custom guide provided [here](../docs/cuda_toolkit.md) *(Recommended for Ubuntu 18.04, 20.04, 22.04)*
   - If you don't have a compatible GPU, you can adjust for CPU-only mode (see "Hardware-Specific Adjustments" below).
-- **Operating System**: Tested on Linux (x86_64). May work on Windows/macOS with adjustments, but not guaranteed.
 
 ## Setup - Must Complete Entire Section
 
 ### **Clone the Repository**
 ```
-git clone git@github.com:adossantos21/paper_2.git
+git clone git@github.com:adossantos21/sebnet.git
 ```
 ### **Setup the Conda Environment**
 
 1. **Launch a terminal and enter the current directory:**
    ```
-   cd paper_2
+   cd sebnet/
    ```
 
 2. **Create the environment:**
    ```
-   conda env create -f environment.yml
+   conda create -n venv_sebnet python=3.8 -y
    ```
-   - This will create an environment named `venv_sebnet` with Python 3.8 and all dependencies.
-   - If you want a different name, use `conda env create -f environment.yml -n your-env-name`.
-   - The process may take several minutes, as it downloads and installs packages from channels like `pytorch`, `nvidia`, `conda-forge`, and `defaults`.
-   - If you encounter solver errors (e.g., package conflicts), try running `conda env create -f environment.yml --no-builds` to ignore specific build strings, or update Conda with `conda update conda`.
-
 3. **Activate the Environment:**
    ```
    conda activate venv_sebnet
+   ```
+4. **Install PyTorch**
+
+   See the [PyTorch Archive](https://pytorch.org/get-started/previous-versions/) for the PyTorch version you want. This project was built on PyTorch 2.4.1 and supports CUDA Toolkit 12.1 and CUDA Toolkit 12.4.
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+   ```
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
    ```
 4. **Initialize the Repository:**
 
    Execute the following commands:
     ```
-    chmod +x initialize.sh
-    ./initialize.sh
+    chmod +x install/initialize.sh
+    ./install/initialize.sh
     ```
     - This will install remaining packages for MMPretrain and MMSegmentation
     - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
@@ -56,10 +67,12 @@ git clone git@github.com:adossantos21/paper_2.git
    ```
    If CUDA is not available but you expect it to be, ensure your NVIDIA drivers are up to date and match your CUDA toolkit version.
 
-   Run the following to check that MMEngine and MMCV were properly installed:
+   Run the following to check that MMEngine, MMCV, MMPretrain, and MMSeg were properly installed:
    ```
    python -c "import mmengine; print(f'\nMMEngine Version: {mmengine.__version__}')"
    python -c "import mmcv; print(f'\nMMCV Version: {mmcv.__version__}')"
+   python -c "import mmpretrain; print(f'\nMMPretrain Version: {mmpretrain.__version__}')"
+   python -c "import mmseg; print(f'\nMMSeg Version: {mmseg.__version__}')"
    ```
 6. **One Small Bug**
 
@@ -79,7 +92,7 @@ git clone git@github.com:adossantos21/paper_2.git
 
 8. **Run the Software**:
 
-   Follow the usage instructions in [README.md](https://github.com/adossantos21/paper_2/blob/main/README.md).
+   Follow the usage instructions in [README.md](../README.md).
 
 ## Hardware-Specific Adjustments
 
