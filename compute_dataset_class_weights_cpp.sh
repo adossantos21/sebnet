@@ -1,4 +1,4 @@
-g++ -std=c++17 compute_dataset_class_weights.cpp -o compute_weights `pkg-config --cflags --libs opencv4`
+g++ -std=c++17 compute_dataset_class_weights.cpp -o compute_weights -lpng -lz `pkg-config --cflags --libs opencv4`
 
 ./compute_weights \
     --use_custom_path \
