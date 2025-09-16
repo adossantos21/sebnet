@@ -39,7 +39,7 @@
       ./generate_cityscapes_gt.sh
       ```
 
-4. Configure `eval_edgeMetrics.sh`
+4. Configure `eval_hed.sh` and/or `eval_sbd.sh`
     - Add `-h` flag to see optional arguments and corresponding descriptions.
     - HED Example:
       ```
@@ -76,7 +76,10 @@
       ```
 5. Run the executable:
    ```
-   ./eval_edgeMetrics.sh
+   ./eval_hed.sh
+   ```
+   ```
+   ./eval_sbd.sh
    ```
 #### For image classification or semantic segmentation evaluation
 1. Navigate to either `mmpretrain/` or `mmsegmentation/` directory.
