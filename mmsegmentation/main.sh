@@ -1,5 +1,5 @@
 unset DISPLAY
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=1
 
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py
 #python tools/train.py configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_2xb6_mapillaryv2.py
