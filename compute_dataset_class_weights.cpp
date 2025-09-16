@@ -7,11 +7,11 @@
 #include <stdexcept>
 #include <chrono>
 #include <filesystem>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/core.hpp>
 #include <iomanip>
 #include <algorithm>
 #include <cstring>
+#include <array>
+#include <png.h>
 
 namespace fs = std::filesystem;
 
@@ -35,11 +35,76 @@ std::vector<double> weights_log(const std::vector<double>& class_freq, int num_c
     return weights;
 }
 
+// Function to read a paletted PNG and return indices as 2D vector<uint8_t>
+std::vector<std::vector<uint8_t>> read_paletted_png(const std::string& filename) {
+    FILE* fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    // Initialize libpng structures
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+    if (!png_ptr) {
+        fclose(fp);
+        throw std::runtime_error("Failed to create png read struct");
+    }
+
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+        fclose(fp);
+        throw std::runtime_error("Failed to create png info struct");
+    }
+
+    // Error handling (libpng uses setjmp/longjmp)
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        fclose(fp);
+        throw std::runtime_error("Error during png read");
+    }
+
+    // Initialize I/O
+    png_init_io(png_ptr, fp);
+
+    // Read header info
+    png_read_info(png_ptr, info_ptr);
+
+    // Get image properties
+    int width = png_get_image_width(png_ptr, info_ptr);
+    int height = png_get_image_height(png_ptr, info_ptr);
+    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+
+    // Ensure it's paletted (indexed) with 8-bit depth
+    if (color_type != PNG_COLOR_TYPE_PALETTE || bit_depth != 8) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        fclose(fp);
+        throw std::runtime_error("Image is not an 8-bit paletted PNG");
+    }
+
+    // Allocate row pointers (libpng reads row-by-row)
+    std::vector<png_bytep> row_pointers(height);
+    std::vector<std::vector<uint8_t>> indices(height, std::vector<uint8_t>(width));
+
+    for (int y = 0; y < height; ++y) {
+        row_pointers[y] = indices[y].data();  // Point to our vector rows
+    }
+
+    // Read the entire image (indices only, no expansion needed)
+    png_read_image(png_ptr, row_pointers.data());
+
+    // Clean up
+    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+    fclose(fp);
+
+    return indices;
+}
+
 int main(int argc, char* argv[]) {
     bool use_custom_path = false;
-    int num_classes = 19;
-    std::string dataset_dir = "/path/to/cityscapes/gtFine/train/";
-    std::string suffix = "_gtFine_labelTrainIds.png";
+    int num_classes = 124;
+    std::string dataset_dir = "/path/to/mapillary_vistas/training/v2.0/labels";
+    std::string suffix = ".png";
 
     // Parse arguments
     for (int i = 1; i < argc; ++i) {
@@ -88,26 +153,23 @@ int main(int argc, char* argv[]) {
         for (const auto& file : label_files) {
             auto image_start = std::chrono::steady_clock::now(); // Time this image
 
-            cv::Mat img = cv::imread(file, cv::IMREAD_GRAYSCALE);
-            if (img.empty()) {
-                // To keep progress accurate, still update processed and avg (though time=0)
-                auto image_end = std::chrono::steady_clock::now();
-                double image_time = std::chrono::duration<double>(image_end - image_start).count();
-                avg_time_per_image = (avg_time_per_image * processed + image_time) / (processed + 1);
-                ++processed;
-                // Update progress below
-            } else {
-                for (int r = 0; r < img.rows; ++r) {
-                    const uchar* ptr = img.ptr<uchar>(r);
-                    for (int c = 0; c < img.cols; ++c) {
-                        ++total_counts[ptr[c]];
+            bool loaded_successfully = false;
+            try {
+                auto indices = read_paletted_png(file);
+                for (const auto& row : indices) {
+                    for (uint8_t id : row) {
+                        ++total_counts[id];
                     }
                 }
-                auto image_end = std::chrono::steady_clock::now();
-                double image_time = std::chrono::duration<double>(image_end - image_start).count();
-                avg_time_per_image = (avg_time_per_image * processed + image_time) / (processed + 1);
-                ++processed;
+                loaded_successfully = true;
+            } catch (const std::exception& e) {
+                // Skip counting, but still update timing
             }
+
+            auto image_end = std::chrono::steady_clock::now();
+            double image_time = std::chrono::duration<double>(image_end - image_start).count();
+            avg_time_per_image = (avg_time_per_image * processed + image_time) / (processed + 1);
+            ++processed;
 
             // Calculate progress and ETA
             double progress = static_cast<double>(processed) / file_count;
