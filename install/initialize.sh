@@ -13,7 +13,7 @@ cd ..
 
 # Install mmsegmentation
 cd mmsegmentation
-mim install -e .
+pip install -v -e .
 cd ..
 
 # Resolve MMCV conflict between mmpretrain and mmsegmentation
