@@ -29,6 +29,7 @@ from .aux_modules import (
     BaseSegHead,
     PModule,
     DModule,
+    SBDModule,
     CASENet,
     DFF,
     BEM,
@@ -48,5 +49,6 @@ __all__ = [
     'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
     "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM", "ConvNeXtBlock",
     "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", "CASENet_EarlierLayers",
-    "DFF_EarlierLayers", "BEM_EarlierLayers", "DModule_EarlierLayers"
+    "DFF_EarlierLayers", "BEM_EarlierLayers", "DModule_EarlierLayers",
+    "SBDModule",
 ]
