@@ -74,7 +74,7 @@ git clone git@github.com:adossantos21/sebnet.git
    python -c "import mmpretrain; print(f'\nMMPretrain Version: {mmpretrain.__version__}')"
    python -c "import mmseg; print(f'\nMMSeg Version: {mmseg.__version__}')"
    ```
-6. **One Small Bug**
+6. **Two Small Bugs**
 
    MMEngine as of version `0.10.7`, does not support multi-edge labels. Thus you must make the following change to `miniconda3/envs/venv_sebnet/lib/python3.8/site-packages/mmengine/structures/pixel_data.py`, line 78:
    ```
@@ -90,6 +90,28 @@ git clone git@github.com:adossantos21/sebnet.git
    ```
    A pull request for this change has been created.
 
+   Additionally, I ended up changing two lines of code to facilitate multi-gpu training using my decode heads in `miniconda3/envs/venv_sebnet/lib/python3.8/site-packages/mmengine/model/wrappers/distributed.py`, lines 121 and 126:
+   ```
+   # Change these lines of code from
+   with optim_wrapper.optim_context(self):
+       data = self.module.data_preprocessor(data, training=True)
+       losses = self._run_forward(data, mode='loss')
+   parsed_loss, log_vars = self.module.parse_losses(losses)
+   optim_wrapper.update_params(parsed_loss)
+   if self.detect_anomalous_params:
+       detect_anomalous_params(parsed_loss, model=self)
+   return log_vars
+
+   # To
+   with optim_wrapper.optim_context(self):
+       data = self.module.data_preprocessor(data, training=True)
+       losses, logits = self._run_forward(data, mode='loss')
+   parsed_loss, log_vars = self.module.parse_losses(losses)
+   optim_wrapper.update_params(parsed_loss)
+   if self.detect_anomalous_params:
+       detect_anomalous_params(parsed_loss, model=self)
+   return log_vars, logits
+   ```
 8. **Run the Software**:
 
    Follow the usage instructions in [README.md](../README.md).
