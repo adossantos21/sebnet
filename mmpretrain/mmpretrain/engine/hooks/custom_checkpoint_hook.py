@@ -38,16 +38,6 @@ class CustomCheckpointHook(CheckpointHook):
         else:
             self.file_backend = self.file_client
 
-        # if `self.out_dir` is not equal to `runner._log_dir`, it means that
-        # `self.out_dir` is set so the final `self.out_dir` is the
-        # concatenation of `self.out_dir` and the last level directory of
-        # `runner.work_dir` and `runner._log_dir`
-        #if self.out_dir != runner._log_dir:
-        #    basename = osp.basename(runner.work_dir.rstrip(osp.sep))
-        #    date = osp.basename(runner._log_dir.rstrip(osp.sep))
-        #    self.out_dir = self.file_backend.join_path(
-        #        self.out_dir, basename, date)  # type: ignore  # noqa: E501
-
         runner.logger.info(f'Checkpoints will be saved to {self.out_dir}.')
 
         if self.save_best is not None:
@@ -186,8 +176,8 @@ class CustomCheckpointHook(CheckpointHook):
                 self.out_dir,
                 filename=ckpt_filename,
                 file_client_args=self.file_client_args,
-                save_optimizer=False,
-                save_param_scheduler=False,
+                save_optimizer=True,
+                save_param_scheduler=True,
                 meta=meta,
                 by_epoch=False,
                 backend_args=self.backend_args,

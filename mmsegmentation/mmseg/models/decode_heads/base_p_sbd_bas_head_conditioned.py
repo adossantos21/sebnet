@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PIFusion, PModule, DModule
+from mmseg.models.utils import BaseSegHead, PIFusion, PModule, SBDModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -55,7 +55,7 @@ class ConditionalBaselinePSBDBASHead(BaseDecodeHead):
         self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
         self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
-        self.sbd = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
+        self.sbd = SBDModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
         self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
         self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
 
@@ -74,7 +74,7 @@ class ConditionalBaselinePSBDBASHead(BaseDecodeHead):
         if self.training:
             temp_p, x_p = self.p_module(x)
             p_supervised = self.p_head(temp_p, self.p_cls_seg)
-            temp_d, _ = self.sbd(x)
+            temp_d = self.sbd(x)
             sbd_supervised = self.d_head(temp_d, self.d_cls_seg)
             x[-1] = F.interpolate(
                 x[-1],
@@ -86,7 +86,7 @@ class ConditionalBaselinePSBDBASHead(BaseDecodeHead):
             return tuple([output, p_supervised, sbd_supervised])
         else:
             if self.eval_edges:
-                temp_d, _ = self.sbd(x)
+                temp_d = self.sbd(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
                 output = tuple([output])
             else:
