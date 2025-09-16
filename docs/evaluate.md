@@ -38,11 +38,8 @@
       ```
       ./generate_cityscapes_gt.sh
       ```
-4. Navigate to the parent directory
-   ```
-   cd ../
-   ```
-5. Configure `eval_edgeMetrics.sh`
+
+4. Configure `eval_edgeMetrics.sh`
     - Add `-h` flag to see optional arguments and corresponding descriptions.
     - HED Example:
       ```
@@ -77,7 +74,7 @@
       --split 'val' \
       --pred-suffix '_SBD.png'
       ```
-6. Run the executable:
+5. Run the executable:
    ```
    ./eval_edgeMetrics.sh
    ```
