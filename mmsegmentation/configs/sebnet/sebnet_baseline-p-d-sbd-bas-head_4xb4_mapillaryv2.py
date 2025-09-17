@@ -135,7 +135,7 @@ train_pipeline = [
     dict(type='Mask2Edge', labelIds=list(range(0,124)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]
-train_dataloader = dict(batch_size=8, dataset=dict(data_root=data_root, pipeline=train_pipeline))
+train_dataloader = dict(batch_size=4, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 val_dataloader = dict(batch_size=1, dataset=dict(data_root=data_root))
 test_dataloader = val_dataloader
 
