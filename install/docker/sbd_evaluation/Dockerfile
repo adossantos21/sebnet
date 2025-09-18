@@ -2,8 +2,6 @@ FROM ubuntu:20.04
 
 ARG GIT_PAT
 
-ARG KAGGLE_JSON_PATH
-
 ARG SBD_PREDS_DIR
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,7 +32,8 @@ RUN conda create -n venv_pyEdgeEval python=3.8 -y
 
 SHELL ["/bin/bash", "-c"]
 
-RUN echo "source activate venv_pyEdgeEval" >> ~/.bashrc
+# REMOVE this line (it sets activation for root's shell; we'll handle it for the non-root user later)
+# RUN echo "source activate venv_pyEdgeEval" >> ~/.bashrc
 
 ENV PATH=/opt/conda/envs/venv_pyEdgeEval/bin:$PATH
 
@@ -67,18 +66,18 @@ COPY ${SBD_PREDS_DIR} /pyEdgeEval/sbd_preds/
 # Create eval_hed.sh and eval_sbd.sh
 RUN cat <<EOF > /pyEdgeEval/eval_hed.sh
 #!/bin/bash
-cityscapes-raw-eval \
-<path_to_cityscapes_root> \
-<path_to_hed_predictions> \
---output-path <output_path> \
---nonIS \
---pre-seal \
---remove-root \
---categories '1' \
---max-dist 0.02 \
---thresholds 99 \
---nproc 8 \
---split 'val' \
+cityscapes-raw-eval \\
+<path_to_cityscapes_root> \\
+<path_to_hed_predictions> \\
+--output-path <output_path> \\
+--nonIS \\
+--pre-seal \\
+--remove-root \\
+--categories '1' \\
+--max-dist 0.02 \\
+--thresholds 99 \\
+--nproc 8 \\
+--split 'val' \\
 --pred-suffix '_SBD.png'
 EOF
 
@@ -104,5 +103,18 @@ EOF
 RUN chmod +x /pyEdgeEval/eval_hed.sh
 
 RUN chmod +x /pyEdgeEval/eval_sbd.sh
+
+# Create a non-root user and group
+RUN useradd -m -s /bin/bash appuser
+
+# Adjust permissions on key directories/files so the non-root user can access/read/write/execute them
+# (Conda env, working dir, datasets, etc.; use -R for recursive)
+RUN chown -R appuser:appuser /opt/conda /pyEdgeEval /data
+
+# Set up Conda activation for the non-root user's interactive shell
+RUN echo "source activate venv_pyEdgeEval" >> /home/appuser/.bashrc
+
+# Switch to the non-root user for runtime
+USER appuser
 
 CMD ["bash"]
