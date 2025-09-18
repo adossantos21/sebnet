@@ -1,9 +1,9 @@
 # Return to README.md
-[README.md](../README.md)
+[README.md](../../../README.md)
 
 # Installation Instructions
 
-The benefits of this guide is that the Dockerfile builds all the required software and resolves the bugs described in [install.md](.install.md) in a single step.
+The benefits of this guide is that the Dockerfile builds all the required software and resolves the bugs described in [install.md](../../virt_env/install.md) in a single step.
 
 This guide provides the Docker commands to build and correctly launch a container for reproduction activities such as:
 - Training your own models
@@ -26,7 +26,7 @@ This guide provides the Docker commands to build and correctly launch a containe
 
 1. **Download the Dockerfile and navigate in your terminal to the directory it was downloaded**
    
-   [Dockerfile](docker/reproduction/Dockerfile)
+   [Dockerfile](Dockerfile)
 
 2. **Build with PAT**
    ```

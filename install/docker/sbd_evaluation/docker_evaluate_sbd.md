@@ -1,5 +1,5 @@
 # Return to README.md
-[README.md](../README.md)
+[README.md](../../../README.md)
 
 # Installation Instructions
 
@@ -18,7 +18,7 @@ This guide provides the Docker commands to build and correctly launch a containe
 
 1. **Download the Dockerfile and navigate in your terminal to the directory it was downloaded**
    
-   [Dockerfile](docker/sbd_evaluation/Dockerfile)
+   [Dockerfile](Dockerfile)
 
 2. **Build with PAT**
    ```

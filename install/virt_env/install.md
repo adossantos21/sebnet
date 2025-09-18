@@ -1,5 +1,5 @@
 # Return to README.md
-[README.md](../README.md)
+[README.md](../../README.md)
 
 # Installation Instructions
 
@@ -15,7 +15,7 @@ This guide explains how to set up the environment and dependencies required to r
   - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup used CUDA Toolkit 12.1 and 12.4 (on different machines). Check your CUDA version with `nvcc --version` or `nvidia-smi`.
   - CUDA Toolkit must be installed globally for MMCV and MMSegmentation to build successfully:
     - You can download and install the toolkit yourself via [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive).
-    - Or you can follow the custom guide provided [here](../docs/cuda_toolkit.md) *(Recommended for Ubuntu 18.04, 20.04, 22.04)*
+    - Or you can follow the custom guide provided [here](../../docs/cuda_toolkit.md) *(Recommended for Ubuntu 18.04, 20.04, 22.04)*
   - If you don't have a compatible GPU, you can adjust for CPU-only mode (see "Hardware-Specific Adjustments" below).
 
 ## Setup - Must Complete Entire Section
@@ -114,7 +114,7 @@ git clone git@github.com:adossantos21/sebnet.git
    ```
 8. **Run the Software**:
 
-   Follow the usage instructions in [README.md](../README.md).
+   Follow the usage instructions in [README.md](../../README.md).
 
 ## Hardware-Specific Adjustments
 
