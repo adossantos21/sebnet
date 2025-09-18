@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 ARG GIT_PAT
 
-ARG KAGGLE_JSON
+ARG KAGGLE_JSON_PATH
 
 ARG SBD_PREDS_DIR
 
@@ -49,7 +49,7 @@ RUN pip install scipy packaging ftfy regex cityscapesscripts && \
 # Download the Cityscapes Dataset
 RUN pip install kaggle && \
     mkdir ~/.kaggle && \
-    cat ${KAGGLE_JSON} > ~/.kaggle/kaggle.json && \
+    cat ${KAGGLE_JSON_PATH} > ~/.kaggle/kaggle.json && \
     kaggle datasets download -d shuvoalok/cityscapes -p /data && \
     unzip /data/cityscapes.zip -d /data/
 
