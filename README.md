@@ -8,16 +8,15 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 
 **This step is required.**
 
-You have two options for software setup:
+You have a few options for software setup:
 
 - Install dependencies via the [virtual environment](install/virt_env/install.md) approach
-- Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach 
+- Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach
+   - If you've already generated your SBD predictions and ground truth labels, and you only wish to evaluate edge-based metrics, build a container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
 
 ## Quick Evaluation
 
-If you've already generated your SBD predictions and ground truth labels, and you wish to evaluate your edge metrics solely, build your container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
-
-Otherwise, download weights from the table below and follow [evaluate.md](docs/evaluate.md) to generate SBD predictions and ground truth labels.
+Download weights from the table below and follow [evaluate.md](docs/evaluate.md).
 
 **Without Mapillary Pre-training:**
 
