@@ -11,6 +11,7 @@ This guide provides the Docker commands to build and correctly launch a containe
 - **Git**:
   - Ensure Git is installed to clone the repository.
   - Ensure you have your personal access token (PAT) on standby. Otherwise, you'll have to configure the Dockerfile for SSH or Github CLI cloning.
+  - Have an account with https://cityscapes-dataset.com, and access to your username and password
 
 ## Setup - Must Complete Entire Section
 
@@ -20,28 +21,37 @@ This guide provides the Docker commands to build and correctly launch a containe
    
    [Dockerfile](Dockerfile)
 
-2. **Copy the SBD Predictions to the directory containing your Dockerfile**
+2. **Copy the SBD Predictions to the directory containing your Dockerfile (your predictions must be in this directory for the image to build)**
 
    ```
-   cp <rel_path_to_SBD_preds> <abs_path_to_dir_containing_Dockerfile>
+   cp <abs_path_to_SBD_preds> <abs_path_to_dir_containing_Dockerfile>
    ```
 
    Alternatively, you can simply move the SBD predictions:
 
    ```
-   mv <rel_path_to_SBD_preds> <abs_path_to_dir_containing_Dockerfile>
+   mv <abs_path_to_SBD_preds> <abs_path_to_dir_containing_Dockerfile>
    ```
    
-3. **Build with PAT**
-   ```
-   docker build --build-arg GIT_PAT=<your_github_pat> --build-arg SBD_PREDS_DIR=<abs_path_containing_sbd_predictions> --secret id=kaggle,src=<abs_path_to_kaggle_json> -t pyedgeeval-image .
-   ```
-   
-4. **Run the container:**
+3. **Export your Github PAT, and your Cityscapes username and password to environment variables**
 
-   You'll need at least 8 GB of shared memory to evaluate on 8 nproc.
+   ```
+   export MY_GIT_PAT=<your_github_pat>
+   export MY_CITYSCAPES_USERNAME=<your_cityscapes_username>
+   export MY_CITYSCAPES_PASSWORD=<your_cityscapes_password>
+   ```
+   
+5. **Build your image**
+
+   ```
+   docker build --build-arg SBD_PREDS_DIR=<abs_path_to_SBD_preds> --secret id=git_pat,env=MY_GIT_PAT --secret id=cityscapes_username,env=MY_CITYSCAPES_USERNAME --secret id=cityscapes_password,env=MY_CITYSCAPES_PASSWORD -t pyedgeeval-image .
+   ```
+   
+7. **Run the container:**
+
+   You'll need at least 10 GB of shared memory to evaluate on 8 nproc.
    
    Default run:
    ```
-   docker run --shm-size 8g -it pyedgeeval-image
+   docker run --shm-size 10g -it pyedgeeval-image
    ```
