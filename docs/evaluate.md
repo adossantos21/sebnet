@@ -2,7 +2,7 @@
 [README.md](../README.md)
 
 ### To download the weights and evaluate performance:
-1. Download the weights:
+1. If not already downloaded, download the weights:
 
    **Without Mapillary Pre-training:**
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
@@ -11,10 +11,12 @@
    | ConditionalBaselinePSBDBASHead  | [80.7](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/<your-username>/<your-repo>/raw/main/otherfile.ext) |  35.4 |
    | BaselinePDBASHead (PIDNet, Ours)      | [80.5](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/checkpoints/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/best_mIoU.pth)                              | [Pending](https://github.com/adossantos21/paper_2)                         |  31.1 |
    
-3. Activate the conda environment you created from [install.md](../install/install.md):
+3. **(Optional)** If you opted for the [venv](../install/venv/install.md) install approach over [docker](../install/docker/reproduction/docker_reproduction.md), you'll have to activate the conda environment:
+
    ```
    conda activate venv_sebnet
    ```
+   
 #### For semantic edge detection (SBD) evaluation
 1. Enter the `mmsegmentation` directory:
    ```
