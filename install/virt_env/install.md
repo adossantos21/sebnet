@@ -1,0 +1,163 @@
+# Return to README.md
+[README.md](../README.md)
+
+# Installation Instructions
+
+This guide explains how to set up the environment and dependencies required to run the software. The setup uses Conda for reproducibility, as it handles both Conda- and pip-installed packages.
+
+## Prerequisites
+
+- **Conda**: Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution) if you don't have it already. Miniconda is recommended for a lighter installation.
+- **Git**: Ensure Git is installed to clone the repository.
+- **Operating System and Architecture**: Tested on Linux (x86_64). May work on Windows/macOS with adjustments, but not guaranteed.
+- **Distribution**: Ubuntu 20.04
+- **Hardware/Drivers**: 
+  - For GPU acceleration (recommended), you need an NVIDIA GPU with compatible drivers. The default setup used CUDA Toolkit 12.1 and 12.4 (on different machines). Check your CUDA version with `nvcc --version` or `nvidia-smi`.
+  - CUDA Toolkit must be installed globally for MMCV and MMSegmentation to build successfully:
+    - You can download and install the toolkit yourself via [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive).
+    - Or you can follow the custom guide provided [here](../docs/cuda_toolkit.md) *(Recommended for Ubuntu 18.04, 20.04, 22.04)*
+  - If you don't have a compatible GPU, you can adjust for CPU-only mode (see "Hardware-Specific Adjustments" below).
+
+## Setup - Must Complete Entire Section
+
+### **Clone the Repository**
+```
+git clone git@github.com:adossantos21/sebnet.git
+```
+### **Setup the Conda Environment**
+
+1. **Launch a terminal and enter the current directory:**
+   ```
+   cd sebnet/
+   ```
+
+2. **Create the environment:**
+   ```
+   conda create -n venv_sebnet python=3.8 -y
+   ```
+3. **Activate the Environment:**
+   ```
+   conda activate venv_sebnet
+   ```
+4. **Install PyTorch**
+
+   See the [PyTorch Archive](https://pytorch.org/get-started/previous-versions/) for the PyTorch version you want. This project was built on PyTorch 2.4.1 and supports CUDA Toolkit 12.1 and CUDA Toolkit 12.4.
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+   ```
+   ```
+   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
+   ```
+4. **Initialize the Repository:**
+
+   Execute the following commands:
+    ```
+    chmod +x install/initialize.sh
+    ./install/initialize.sh
+    ```
+    - This will install remaining packages for MMPretrain and MMSegmentation
+    - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
+    - Lastly, it will install the forked py-edge-eval from adossantos21 as a package, facilitating edge metric calculations
+5. **Verify Installation**:
+
+   Run the following to check PyTorch (should show version 2.4.1 and CUDA status).
+   ```
+   python -c "import torch; print(f'\nPyTorch Version: {torch.__version__}')"
+   python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+   ```
+   If CUDA is not available but you expect it to be, ensure your NVIDIA drivers are up to date and match your CUDA toolkit version.
+
+   Run the following to check that MMEngine, MMCV, MMPretrain, and MMSeg were properly installed:
+   ```
+   python -c "import mmengine; print(f'\nMMEngine Version: {mmengine.__version__}')"
+   python -c "import mmcv; print(f'\nMMCV Version: {mmcv.__version__}')"
+   python -c "import mmpretrain; print(f'\nMMPretrain Version: {mmpretrain.__version__}')"
+   python -c "import mmseg; print(f'\nMMSeg Version: {mmseg.__version__}')"
+   ```
+6. **Two Small Bugs**
+
+   MMEngine as of version `0.10.7`, does not support multi-edge labels. Thus you must make the following change to `miniconda3/envs/venv_sebnet/lib/python3.8/site-packages/mmengine/structures/pixel_data.py`, line 78:
+   ```
+   # Change these lines of code from
+   assert value.ndim in [
+       2, 3
+   ], f'The dim of value must be 2 or 3, but got {value.ndim}'
+
+   # To
+   assert value.ndim in [
+       2, 3, 4
+   ], f'The dim of value must be 2, 3, or 4, but got {value.ndim}'
+   ```
+   A pull request for this change has been created.
+
+   Additionally, I ended up changing two lines of code to facilitate multi-gpu training using my decode heads in `miniconda3/envs/venv_sebnet/lib/python3.8/site-packages/mmengine/model/wrappers/distributed.py`, lines 121 and 126:
+   ```
+   # Change these lines of code from
+   with optim_wrapper.optim_context(self):
+       data = self.module.data_preprocessor(data, training=True)
+       losses = self._run_forward(data, mode='loss')
+   parsed_loss, log_vars = self.module.parse_losses(losses)
+   optim_wrapper.update_params(parsed_loss)
+   if self.detect_anomalous_params:
+       detect_anomalous_params(parsed_loss, model=self)
+   return log_vars
+
+   # To
+   with optim_wrapper.optim_context(self):
+       data = self.module.data_preprocessor(data, training=True)
+       losses, logits = self._run_forward(data, mode='loss')
+   parsed_loss, log_vars = self.module.parse_losses(losses)
+   optim_wrapper.update_params(parsed_loss)
+   if self.detect_anomalous_params:
+       detect_anomalous_params(parsed_loss, model=self)
+   return log_vars, logits
+   ```
+8. **Run the Software**:
+
+   Follow the usage instructions in [README.md](../README.md).
+
+## Hardware-Specific Adjustments
+
+The default `environment.yml` is pinned to PyTorch 2.4.1 with CUDA 12.4 for GPU support. If your hardware differs (e.g., older CUDA version, no GPU, or different architecture), you may need to modify the setup to avoid installation failures or runtime errors. Here's how:
+
+### Different CUDA Version (e.g., CUDA 12.1 or 11.8)
+- The pinned packages like `pytorch=2.4.1=py3.8_cuda12.4_cudnn9.1.0_0`, `pytorch-cuda=12.4`, `torchaudio=2.4.1=py38_cu124`, and `torchvision=0.19.1=py38_cu124` are specific to CUDA 12.4.
+- To adjust:
+1. Open `environment.yml` and remove or comment out (with `#`) the following lines under `dependencies`:
+    - `pytorch=2.4.1=py3.8_cuda12.4_cudnn9.1.0_0`
+    - `pytorch-cuda=12.4=hc786d27_7`
+    - `pytorch-mutex=1.0=cuda`
+    - `torchaudio=2.4.1=py38_cu124`
+    - `torchvision=0.19.1=py38_cu124`
+    - Any other CUDA-specific packages like `cuda-cudart`, `cuda-cupti`, etc. (search for "cuda" in the file).
+2. Create the environment as usual (step 3 above).
+3. Activate the environment.
+4. Install PyTorch for your CUDA version using one of these commands (replace with your version; check your CUDA with `nvcc --version`):
+   - For CUDA 12.1:
+     ```
+     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+     ```
+   - For CUDA 11.8:
+     ```
+     conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+     ```
+   - For other versions, visit [PyTorch Get Started](https://pytorch.org/get-started/locally/) and select "Conda" as the package manager to generate the command.
+   - Note: PyTorch 2.4.x officially supports CUDA 11.8 and 12.1 out-of-the-box, but builds for 12.4 are available via the same channels. If using a newer/older CUDA, you may need to downgrade PyTorch or install from source.
+
+### CPU-Only (No GPU)
+
+If you don't have an NVIDIA GPU or prefer CPU mode:
+1. Follow the steps above to remove/comment out the CUDA-specific packages (as in the CUDA adjustment section).
+2. Create and activate the environment.
+3. Install the CPU version:
+    ```
+    conda install pytorch torchvision torchaudio cpuonly -c pytorch
+    ```
+    - Performance will be slower without GPU acceleration.
+
+### Other Potential Changes
+- **Python Version**: The env uses Python 3.8. If you need a different version (e.g., 3.10), change `python=3.8.20=he870216_0` and `python_abi=3.8=2_cp38` in `environment.yml`, then recreate the env. Some packages may need version adjustments.
+- **Channels**: If packages fail to download, ensure your Conda is configured to use the listed channels (they are specified in the yml).
+- **Pip Packages**: The `pip:` section at the end installs additional libraries. If any fail (rare), install them manually with `pip install <package>` after activation.
+
+If you encounter issues, check the Conda documentation or open an issue in the repository.

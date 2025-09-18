@@ -13,7 +13,7 @@
    
 2. Find the config file path, e.g., `configs/alex_sebnet/pretrain01_tests/pretrain01_staged_1xb64_in1k.py`
 
-3. **(Optional)** If you opted for the [venv](../install/venv/install.md) install approach over [docker](../install/docker/reproduction/docker_reproduction.md), activate the conda environment:
+3. **(Optional)** If you opted for the [virt_env](../install/virt_env/install.md) install approach over [docker](../install/docker/reproduction/docker_reproduction.md), activate the conda environment:
    ```
    conda activate venv_sebnet
    ```
@@ -36,7 +36,7 @@
    cd mmsegmentation/
    ```
 2. Find the config file path, e.g., `configs/sebnet/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes.py`
-3. **(Optional)** If you opted for the [venv](../install/venv/install.md) install approach over [docker](../install/docker/reproduction/docker_reproduction.md), activate the conda environment:
+3. **(Optional)** If you opted for the [virt_env](../install/virt_env/install.md) install approach over [docker](../install/docker/reproduction/docker_reproduction.md), activate the conda environment:
    ```
    conda activate venv_sebnet
    ```

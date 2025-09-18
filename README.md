@@ -10,7 +10,7 @@ Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs dev
 
 You have two options for software setup:
 
-- Install dependencies via the [virtual environment](install/venv/install.md) approach
+- Install dependencies via the [virtual environment](install/virt_env/install.md) approach
 - Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach 
 
 ## Quick Evaluation
