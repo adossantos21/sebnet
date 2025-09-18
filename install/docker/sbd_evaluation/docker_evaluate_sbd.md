@@ -34,7 +34,7 @@ This guide provides the Docker commands to build and correctly launch a containe
    
 3. **Build with PAT**
    ```
-   docker build --build-arg GIT_PAT=<your_github_pat> --build-arg KAGGLE_JSON_PATH=<abs_path_to_kaggle_json_file> --build-arg SBD_PREDS_DIR=<abs_path_containing_sbd_predictions> -t pyedgeeval-image .
+   docker build --build-arg GIT_PAT=<your_github_pat> --build-arg SBD_PREDS_DIR=<abs_path_containing_sbd_predictions> --secret id=kaggle,src=<abs_path_to_kaggle_json> -t pyedgeeval-image .
    ```
    
 4. **Run the container:**
