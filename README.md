@@ -15,7 +15,9 @@ You have two options for software setup:
 
 ## Quick Evaluation
 
-Download weights from the table below and follow [evaluate.md](docs/evaluate.md) for detailed steps.
+If you've already generated your SBD predictions and ground truth labels, and you wish to evaluate your edge metrics solely, build your container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
+
+Otherwise, download weights from the table below and follow [evaluate.md](docs/evaluate.md) to generate SBD predictions and ground truth labels.
 
 **Without Mapillary Pre-training:**
 
