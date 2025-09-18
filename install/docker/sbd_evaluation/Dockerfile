@@ -10,8 +10,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies and Git
 RUN apt-get update && apt-get install -y \
+    build-essential \
     git \
     wget \
+    unzip \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +24,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     /opt/conda/bin/conda clean --all -y && \
     echo "export PATH=/opt/conda/bin:$PATH" >> /etc/profile
 
-ENV PATH /opt/conda/bin:$PATH
+ENV PATH=/opt/conda/bin:$PATH
 
 RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
@@ -34,27 +36,33 @@ SHELL ["/bin/bash", "-c"]
 
 RUN echo "source activate venv_pyEdgeEval" >> ~/.bashrc
 
-ENV PATH /opt/conda/envs/venv_pyEdgeEval/bin:$PATH
+ENV PATH=/opt/conda/envs/venv_pyEdgeEval/bin:$PATH
 
 # Make a new directory called pyEdgeEval
-RUN mkdir /pyEdgeEval/sbd
+RUN mkdir /pyEdgeEval
+
+RUN mkdir /pyEdgeEval/sbd_preds
 
 # Set working directory
 WORKDIR /pyEdgeEval
 
 # Run initialize.sh equivalent steps
-RUN pip install scipy packaging ftfy regex cityscapesscripts && \
-    pip install git+https://${GIT_PAT}@github.com/adossantos21/py-edge-eval.git@sebnet
+RUN pip install cityscapesscripts matplotlib mat73 numpy scipy prettytable pymatreader opencv-python
+
+# Install PyEdgeEval
+RUN pip install git+https://${GIT_PAT}@github.com/adossantos21/py-edge-eval.git@sebnet
 
 # Download the Cityscapes Dataset
-RUN pip install kaggle && \
+RUN --mount=type=secret,id=kaggle,dst=/tmp/kaggle.json \
+    pip install kaggle && \
     mkdir ~/.kaggle && \
-    cat ${KAGGLE_JSON_PATH} > ~/.kaggle/kaggle.json && \
+    cat /tmp/kaggle.json > ~/.kaggle/kaggle.json && \
+    chmod 600 ~/.kaggle/kaggle.json && \
     kaggle datasets download -d shuvoalok/cityscapes -p /data && \
     unzip /data/cityscapes.zip -d /data/
 
 # Copy your SBD Directory to the container
-COPY ${SBD_PREDS_DIR} /pyEdgeEval/sbd
+COPY ${SBD_PREDS_DIR} /pyEdgeEval/sbd_preds/
 
 # Create eval_hed.sh and eval_sbd.sh
 RUN cat <<EOF > /pyEdgeEval/eval_hed.sh
