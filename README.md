@@ -1,16 +1,25 @@
 # SEBNet
 
 ## Overview
+
 Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs developed for the semantic segmentation task. SEBNet leverages principles from the Semantic Boundary Detection (SBD) task to improve the segmentation quality of a real-time architecture based on PIDNet [[1]](#1). SEBNet also leverages the OTFGT module from [[2]](#2) and pyEdgeEval from [[3]](#3) for SBD peformance improvements and evaluation, respectively.
 
 ## Installation
 
-Install dependencies by following [install.md](install/install.md). **This step is required.**
+**This step is required.**
+
+You have a few options for software setup:
+
+- Install dependencies via the [virtual environment](install/virt_env/install.md) approach
+- Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach
+   - If you've already generated your HED/SBD predictions, and you only wish to evaluate edge-based metrics, build a container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
 
 ## Quick Evaluation
-Download weights from the table below and follow [evaluate.md](docs/evaluate.md) for detailed steps.
+
+Download weights from the table below and follow [evaluate.md](docs/evaluate.md).
 
 **Without Mapillary Pre-training:**
+
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
    | BaselinePDSBDBASHead            | [81.1](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  31.1 |
@@ -18,17 +27,23 @@ Download weights from the table below and follow [evaluate.md](docs/evaluate.md)
    | BaselinePDBASHead (PIDNet, Ours)      | [80.5](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/checkpoints/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/best_mIoU.pth)                              | [Pending](https://github.com/adossantos21/paper_2)                         |  31.1 |
 
 ## Reproducing Experiments / Training your own models
+
 For pre-training and fine-tuning ablations, see [reproduction.md](docs/reproduction.md).
 
 ## Description
+
 The development of SEBNet was sequential and comprehensive. There are two stages.
 
 ### Stage 1 - Pre-training
+
 To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDNet: 
+
 1. The vanilla backbone is trained on ImageNet-1K traditionally.
 
 ### Stage 2 - Finetuning
+
 Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 9 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
+
 1.  **Ablation 01** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
 2.  **Ablation 02** - Baseline + P Head (from PIDNet's P Branch)
 3.  **Ablation 03** - Baseline + D Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
@@ -59,9 +74,11 @@ Next, a decoder is attached for the downstream semantic segmentation task. A bas
 28. **Ablation 28** - Best Model + Mapillary Pre-training
 
 ## Results
+
 Results are pending. The target date for segmentation results is September 18th, 2025. The target date for boundary results is October 10th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
 
 ## References
+
 <a id="1">[1]</a> 
 J. Xu, Z. Xiong, and S. P. Bhattacharyya, "PIDNet: A real-time semantic segmentation network inspired by PID controllers." https://doi.org/10.48550/arXiv.2206.02066
 
