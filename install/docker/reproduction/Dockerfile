@@ -63,4 +63,17 @@ RUN python -c "import torch; print(torch.__version__, torch.cuda.is_available())
     python -c "import mmpretrain; print(mmpretrain.__version__)" && \
     python -c "import mmseg; print(mmseg.__version__)"
 
+# Create a non-root user and group
+RUN useradd -m -s /bin/bash appuser
+
+# Adjust permissions on key directories/files so the non-root user can access/read/write/execute them
+# (Conda env, working dir, datasets, etc.; use -R for recursive)
+RUN chown -R appuser:appuser /opt/conda /sebnet
+
+# Set up Conda activation for the non-root user's interactive shell
+RUN echo "source activate venv_pyEdgeEval" >> /home/appuser/.bashrc
+
+# Switch to the non-root user for runtime
+USER appuser
+
 CMD ["bash"]

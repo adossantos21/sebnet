@@ -12,7 +12,7 @@ You have a few options for software setup:
 
 - Install dependencies via the [virtual environment](install/virt_env/install.md) approach
 - Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach
-   - If you've already generated your SBD predictions and ground truth labels, and you only wish to evaluate edge-based metrics, build a container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
+   - If you've already generated your HED/SBD predictions, and you only wish to evaluate edge-based metrics, build a container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
 
 ## Quick Evaluation
 
