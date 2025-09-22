@@ -167,6 +167,274 @@ class PModule(CustomBaseModule):
         x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
         
         return tuple([temp_p, x_p]) if self.training else x_p
+    
+class PModule_Pag1(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(1):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+            #temp_p = x_p.clone() # (N, 128, H/8, W/8)
+        
+        return tuple([x_p])
+    
+class PModule_Pag2(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(2):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.compression_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+        self.pag_2 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+        #    temp_p = x_p.clone() # (N, 128, H/8, W/8)
+
+        # stage 4
+        x_p = self.p_branch_layers[1](self.relu(x_p))
+
+        comp_i = self.compression_2(x_3)
+        x_p = self.pag_2(x_p, comp_i)
+        
+        return tuple([x_p])
+    
+class PModule_LastLayer(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(3):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.compression_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+        self.pag_2 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+        #    temp_p = x_p.clone() # (N, 128, H/8, W/8)
+
+        # stage 4
+        x_p = self.p_branch_layers[1](self.relu(x_p))
+
+        comp_i = self.compression_2(x_3)
+        x_p = self.pag_2(x_p, comp_i)
+
+        # stage 5
+        x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
+        
+        return tuple([x_p])
 
 
 class DModule(CustomBaseModule):

@@ -1,16 +1,25 @@
 # SEBNet
 
 ## Overview
+
 Semantic Boundary-Conditioned Network (SEBNet) is a family of real-time CNNs developed for the semantic segmentation task. SEBNet leverages principles from the Semantic Boundary Detection (SBD) task to improve the segmentation quality of a real-time architecture based on PIDNet [[1]](#1). SEBNet also leverages the OTFGT module from [[2]](#2) and pyEdgeEval from [[3]](#3) for SBD peformance improvements and evaluation, respectively.
 
 ## Installation
 
-Install dependencies by following [install.md](install/install.md). **This step is required.**
+**This step is required.**
+
+You have a few options for software setup:
+
+- Install dependencies via the [virtual environment](install/virt_env/install.md) approach
+- Install dependencies via the [Docker](install/docker/reproduction/docker_reproduction.md) approach
+   - If you've already generated your HED/SBD predictions, and you only wish to evaluate edge-based metrics, build a container via the [SBD Docker Image](install/docker/sbd_evaluation/docker_evaluate_sbd.md) approach.
 
 ## Quick Evaluation
-Download weights from the table below and follow [evaluate.md](docs/evaluate.md) for detailed steps.
+
+Download weights from the table below and follow [evaluate.md](docs/evaluate.md).
 
 **Without Mapillary Pre-training:**
+
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
    | BaselinePDSBDBASHead            | [81.1](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  31.1 |
@@ -18,50 +27,71 @@ Download weights from the table below and follow [evaluate.md](docs/evaluate.md)
    | BaselinePDBASHead (PIDNet, Ours)      | [80.5](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/checkpoints/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/best_mIoU.pth)                              | [Pending](https://github.com/adossantos21/paper_2)                         |  31.1 |
 
 ## Reproducing Experiments / Training your own models
+
 For pre-training and fine-tuning ablations, see [reproduction.md](docs/reproduction.md).
 
 ## Description
+
 The development of SEBNet was sequential and comprehensive. There are two stages.
 
 ### Stage 1 - Pre-training
+
 To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDNet: 
+
 1. The vanilla backbone is trained on ImageNet-1K traditionally.
 
 ### Stage 2 - Finetuning
-Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 9 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
-1.  **Ablation 01** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
-2.  **Ablation 02** - Baseline + P Head (from PIDNet's P Branch)
-3.  **Ablation 03** - Baseline + D Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
-4.  **Ablation 04** - Baseline + CASENet SBD Head, Edge Width 2, SBD Loss Weight 5.0
-5.  **Ablation 05** - Baseline + DFF SBD Head, Edge Width 2, SBD Loss Weight 5.0
-6.  **Ablation 06** - Baseline + BEM SBD Head, Edge Width 2, SBD Loss Weight 5.0
-7.  **Ablation 07** - Baseline + D Multi-Label SBD Head, Edge Width 2, SBD Loss Weight 5.0
-8.  **Ablation 08** - Baseline + D Earlier Layers Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
-9.  **Ablation 09** - Baseline + CASENet Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-10. **Ablation 10** - Baseline + DFF Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-11. **Ablation 11** - Baseline + BEM Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-12. **Ablation 12** - Baseline + D Multi-Label Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-13. **Ablation 13** - Baseline + SBD Head, Edge Width 1, SBD Loss Weight 5.0
-14. **Ablation 14** - Baseline + SBD Head, Edge Width 4, SBD Loss Weight 5.0
-15. **Ablation 15** - Baseline + SBD Head, Edge Width 8, SBD Loss Weight 5.0
-16. **Ablation 16** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 1.0
-17. **Ablation 17** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 10.0
-18. **Ablation 18** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 20.0
-19. **Ablation 19** - Baseline + P Head + D Head
-20. **Ablation 20** - Baseline + D Head + SBD Head
-21. **Ablation 21** - Baseline + P Head + SBD Head (Conditioning)
-22. **Ablation 22** - Baseline + P Head + SBD Head (Fusion)
-23. **Ablation 23** - Baseline + P Head + SBD Head + BAS Loss (Conditioning)
-24. **Ablation 24** - Baseline + P Head + SBD Head + BAS Loss (Fusion)
-25. **Ablation 25** - Baseline + P Head + D Head + BAS Loss (PIDNet)
-26. **Ablation 26** - Baseline + P Head + D Head + SBD Head
-27. **Ablation 27** - Baseline + P Head + D Head + SBD Head + BAS Loss (PIDNet + SBD)
-28. **Ablation 28** - Best Model + Mapillary Pre-training
+
+Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 40 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone. An asterisk indicates the ablation study is complete.
+
+1.  **Ablation 01*** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
+2.  **Ablation 02*** - Baseline + P Head (from PIDNet's P Branch)
+3.  **Ablation 03** - Baseline + P Head (Pag1 supervised, conditioning only)
+4.  **Ablation 04** - Baseline + P Head (Pag2 supervised, conditioning only)
+5.  **Ablation 05** - Baseline + P Head (Last layer supervised, conditioning only)
+6.  **Ablation 06*** - Baseline + D Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
+7.  **Ablation 07*** - Baseline + CASENet SBD Head, Edge Width 2, SBD Loss Weight 5.0
+8.  **Ablation 08*** - Baseline + DFF SBD Head, Edge Width 2, SBD Loss Weight 5.0
+9.  **Ablation 09*** - Baseline + BEM SBD Head, Edge Width 2, SBD Loss Weight 5.0
+10. **Ablation 10*** - Baseline + D Multi-Label SBD Head, Edge Width 2, SBD Loss Weight 5.0
+11. **Ablation 11*** - Baseline + D Earlier Layers Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
+12. **Ablation 12*** - Baseline + CASENet Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+13. **Ablation 13*** - Baseline + DFF Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+14. **Ablation 14*** - Baseline + BEM Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+15. **Ablation 15*** - Baseline + D Multi-Label Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
+16. **Ablation 16*** - Baseline + SBD Head, Edge Width 1, SBD Loss Weight 5.0
+17. **Ablation 17*** - Baseline + SBD Head, Edge Width 4, SBD Loss Weight 5.0
+18. **Ablation 18*** - Baseline + SBD Head, Edge Width 8, SBD Loss Weight 5.0
+19. **Ablation 19*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 1.0
+20. **Ablation 20*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 10.0
+21. **Ablation 21*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 20.0
+22. **Ablation 22*** - Baseline + D Head (Conditioned) + SBD Head (Conditioned)
+23. **Ablation 23** - Baseline + P Head (Conditioned) + D Head (Conditioned), *Appendix ablation*
+24. **Ablation 24** - Baseline + P Head (Fused) + D Head (Conditioned), *Appendix ablation*
+25. **Ablation 25*** - Baseline + P Head (Fused) + D Head (Fused), *Appendix ablation*
+26. **Ablation 26** - Baseline + P Head (Conditioned) + SBD Head (Conditioned)
+27. **Ablation 27*** - Baseline + P Head (Fused) + SBD Head (Conditioned)
+28. **Ablation 28*** - Baseline + P Head (Fused) + SBD Head (Fused)
+29. **Ablation 29** - Baseline + P Head (Conditioned) + D Head (Conditioned) + BAS Loss, *Appendix ablation*
+30. **Ablation 30** - Baseline + P Head (Fused) + D Head (Conditioned) + BAS Loss, *Appendix ablation*
+31. **Ablation 31*** - Baseline + P Head (Fused) + D Head (Fused) + BAS Loss (PIDNet), *Needed for study comparison*
+32. **Ablation 32** - Baseline + P Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
+33. **Ablation 33*** - Baseline + P Head (Fused) + SBD Head (Conditioned) + BAS Loss
+34. **Ablation 34*** - Baseline + P Head (Fused) + SBD Head (Fused) + BAS Loss
+35. **Ablation 35** - Baseline + P Head (Conditioned) + D Head (Conditioned) + SBD Head (Conditioned)
+36. **Ablation 36** - Baseline + P Head (Fused) + D Head (Conditioned) + SBD Head (Conditioned)
+37. **Ablation 37*** - Baseline + P Head (Fused) + D Head (Fused) + SBD Head (Conditioned)
+38. **Ablation 38** - Baseline + P Head (Conditioned) + D Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
+39. **Ablation 39** - Baseline + P Head (Fused) + D Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
+40. **Ablation 40*** - Baseline + P Head (Fused) + D Head (Fused) + SBD Head (Conditioned) + BAS Loss (PIDNet + SBD)
+41. **Ablation 41** - Best Model + Mapillary Pre-training
 
 ## Results
+
 Results are pending. The target date for segmentation results is September 18th, 2025. The target date for boundary results is October 10th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
 
 ## References
+
 <a id="1">[1]</a> 
 J. Xu, Z. Xiong, and S. P. Bhattacharyya, "PIDNet: A real-time semantic segmentation network inspired by PID controllers." https://doi.org/10.48550/arXiv.2206.02066
 

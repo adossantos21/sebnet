@@ -23,11 +23,15 @@ from .fusion_modules import (
     Bag,
     LightBag,
     PIFusion,
+    BaseConv,
 )
 
 from .aux_modules import (
     BaseSegHead,
     PModule,
+    PModule_Pag1,
+    PModule_Pag2,
+    PModule_LastLayer,
     DModule,
     SBDModule,
     CASENet,
@@ -50,5 +54,6 @@ __all__ = [
     "PIFusion", "PModule", "DModule", "CASENet", "DFF", "BEM", "ConvNeXtBlock",
     "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", "CASENet_EarlierLayers",
     "DFF_EarlierLayers", "BEM_EarlierLayers", "DModule_EarlierLayers",
-    "SBDModule",
+    "SBDModule", "PModule_Pag1", "PModule_Pag2", "PModule_LastLayer",
+    "BaseConv",
 ]
