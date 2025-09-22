@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PIFusion, PModule, DModule
+from mmseg.models.utils import BaseSegHead, BaseConv, PModuleConditioned as PModule
+from mmseg.models.utils import SBDModule as DModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,9 +16,9 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class ConditionalBaselinePSBDHead(BaseDecodeHead):
-    """Baseline + P Branch + SBD head for mapping feature to a predefined set
-    of classes (with conditional fusion).
+class BaselinePConditionedDConditionedHead(BaseDecodeHead):
+    """Baseline + P + D head (PIDNet) for mapping feature to a predefined set
+    of classes.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -47,17 +48,19 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
         assert isinstance(num_classes, int)
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.stride = 1
         self.num_stem_blocks = num_stem_blocks
+        self.stride = 1
         self.eval_edges = eval_edges
-        self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
-        self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
-        self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+        if self.training:
+            self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
+            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
+            self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
+        if self.training or self.eval_edges:
+            self.d_module = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
+            self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg)
+            self.d_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+        self.conv = BaseConv(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
-        self.sbd = DModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks, eval_edges=self.eval_edges)
-        self.d_head = BaseSegHead(self.in_channels // 2, self.in_channels // 4, self.stride, norm_cfg) # No act_cfg here on purpose. See pidnet head.
-        self.d_cls_seg = nn.Conv2d(in_channels // 4, self.num_classes, kernel_size=1)
 
     def forward(self, x):
         """
@@ -72,75 +75,77 @@ class ConditionalBaselinePSBDHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            temp_p, x_p = self.p_module(x)
-            p_supervised = self.p_head(temp_p, self.p_cls_seg)
-            temp_d, _ = self.sbd(x)
-            sbd_supervised = self.d_head(temp_d, self.d_cls_seg)
+            temp_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
+            temp_d = self.d_module(x) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+            d_supervised = self.d_head(temp_d, self.d_cls_seg) # (N, 1, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            feats = self.fusion(x_p, x[-1])
-            output = self.seg_head(feats, self.cls_seg)
-            return tuple([output, p_supervised, sbd_supervised])
+            feats = self.conv(x[-1])
+            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
+            return tuple([output, p_supervised, d_supervised])
         else:
             if self.eval_edges:
-                temp_d, _ = self.sbd(x)
+                temp_d = self.d_module(x)
                 output = self.d_head(temp_d, self.d_cls_seg)
                 output = tuple([output])
             else:
-                x_p = self.p_module(x)
                 x[-1] = F.interpolate(
                     x[-1],
                     size=x[1].shape[2:],
                     mode='bilinear',
-                    align_corners=self.align_corners)
-                feats = self.fusion(x_p, x[-1])
-                output = self.seg_head(feats, self.cls_seg)
+                    align_corners=self.align_corners
+                )
+                feats = self.conv(x[-1])
+                output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
             return output
         
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
-        gt_multi_edge_segs = [
-            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
+        gt_edge_segs = [
+            data_sample.gt_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
-        gt_multi_edge_segs = torch.stack(gt_multi_edge_segs, dim=0)
-        return gt_sem_segs, gt_multi_edge_segs
+        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
+        return gt_sem_segs, gt_edge_segs
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, p_logits, sbd_logits = logits
-        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
-        seg_logits = resize(
-            input=seg_logits,
+        loss = dict()
+        i_logit, p_logit, d_logit = logits
+        seg_label, bd_label = self._stack_batch_gt(batch_data_samples)
+        p_logit = resize(
+            input=p_logit,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        p_logits = resize(
-            input=p_logits,
+        i_logit = resize(
+            input=i_logit,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        sbd_logits = resize(
-            input=sbd_logits,
-            size=bd_multi_label.shape[3:],
+        d_logit = resize(
+            input=d_logit,
+            size=bd_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         seg_label = seg_label.squeeze(1)
-        bd_multi_label = bd_multi_label.squeeze(1)
-        logits = dict(
-            seg_logits=seg_logits,
-            p_logits=p_logits,
-            sbd_logits=sbd_logits
-        )
-        loss = dict()
-        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_seg_p'] = self.loss_decode[1](p_logits, seg_label)
-        loss['loss_sbd'] = self.loss_decode[2](sbd_logits, bd_multi_label)
+        bd_label = bd_label.squeeze(1)
+        loss['loss_seg_p'] = self.loss_decode[0](
+            p_logit, seg_label, ignore_index=self.ignore_index)
+        loss['loss_seg'] = self.loss_decode[1](i_logit, seg_label)
+        loss['loss_bd'] = self.loss_decode[2](d_logit, bd_label)
         loss['acc_seg'] = accuracy(
-            seg_logits, seg_label, ignore_index=self.ignore_index)
+            i_logit, seg_label, ignore_index=self.ignore_index)
+        
+        logits = dict(
+            seg_logits=i_logit,
+            p_logits=p_logit,
+            d_logits=d_logit
+        )
         return loss, logits

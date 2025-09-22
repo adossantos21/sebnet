@@ -16,9 +16,9 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePDHeadConditioned(BaseDecodeHead):
-    """Baseline + P + D head (PIDNet) for mapping feature to a predefined set
-    of classes.
+class BaselinePConditonedDConditionedBASHead(BaseDecodeHead):
+    """Baseline + P + D head (PIDNet) + BAS loss for mapping feature to a predefined set
+    of classes. Includes extra boundary awareness loss seen in PIDNet.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -140,6 +140,10 @@ class BaselinePDHeadConditioned(BaseDecodeHead):
             p_logit, seg_label, ignore_index=self.ignore_index)
         loss['loss_seg'] = self.loss_decode[1](i_logit, seg_label)
         loss['loss_bd'] = self.loss_decode[2](d_logit, bd_label)
+        filler = torch.ones_like(seg_label) * self.ignore_index
+        sem_bd_label = torch.where(
+            torch.sigmoid(d_logit[:, 0, :, :]) > 0.8, seg_label, filler)
+        loss['loss_bas'] = self.loss_decode[3](i_logit, sem_bd_label)
         loss['acc_seg'] = accuracy(
             i_logit, seg_label, ignore_index=self.ignore_index)
         
