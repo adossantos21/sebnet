@@ -1,22 +1,24 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-
-from mmseg.models.utils import BaseSegHead, DFF
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from mmseg.models.losses import accuracy
-from mmseg.models.utils import resize
-
-from mmseg.registry import MODELS
-from .decode_head import BaseDecodeHead
-
-from typing import Tuple
-from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import (
+    resize,
+    BaseSegHead,
+    EdgeModuleConditioned as EdgeModule
+)
+from mmseg.registry import MODELS
+from mmseg.utils import OptConfigType, SampleList
+from .decode_head import BaseDecodeHead
+from typing import Tuple
 
 @MODELS.register_module()
-class BaselineDFFHead(BaseDecodeHead):
-    """Baseline + DFF head for mapping feature to a predefined set
-    of classes.
+class Ablation06(BaseDecodeHead):
+    """
+    Ablation 06 - Baseline + Edge Head, conditioned with a HED supervisory signal.
+    No fusion. See Holistically-Nested Edge Detection (HED) at
+    https://arxiv.org/pdf/1504.06375.pdf for more details.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -28,8 +30,10 @@ class BaselineDFFHead(BaseDecodeHead):
     """
 
     def __init__(self, 
-                 in_channels=256, 
-                 num_classes=19, 
+                 in_channels: int = 256, 
+                 num_classes: int = 19, 
+                 num_stem_blocks: int = 3,
+                 stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  eval_edges: bool = False,
@@ -41,16 +45,18 @@ class BaselineDFFHead(BaseDecodeHead):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
-        assert isinstance(in_channels, int)
-        assert isinstance(num_classes, int)
-        self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.stride = 1
+        assert isinstance(in_channels, int), f"Expected in_channels to be int, got {type(in_channels)}"
+        assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
+        assert isinstance(num_stem_blocks, int), f"Expected num_stem_blocks to be int, got {type(num_stem_blocks)}"
+        assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         self.eval_edges = eval_edges
-        self.dff = DFF(nclass=self.num_classes)
-        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
+        if self.training or self.eval_edges:
+            self.edge_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
+            self.hed_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.hed_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+        self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[Tensor]):
         """
         Forward function.
         x should be a tuple of outputs:
@@ -63,24 +69,27 @@ class BaselineDFFHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.dff(x) # side5: (N, K, H/4, W/4), fuse: (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+            x_edges = self.edge_module(x) # x_edges: (N, 128, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
-            return tuple([output, side5, fuse])
+            hed = self.hed_head(x_edges, self.hed_cls_seg) # hed: (N, 1, H/8, W/8)
+            output = self.seg_head(x[-1], self.cls_seg) # output: (N, K, H/8, W/8) where K = num_classes
+            return tuple([output, hed])
         else:
             if self.eval_edges:
-                _, output = self.dff(x)
-                output = tuple([output])
+                x_edges = self.edge_module(x)
+                hed = self.hed_head(x_edges, self.hed_cls_seg)
+                output = tuple([hed])
             else:
                 x[-1] = F.interpolate(
                     x[-1],
                     size=x[1].shape[2:],
                     mode='bilinear',
-                    align_corners=self.align_corners)
+                    align_corners=self.align_corners
+                )
                 output = self.seg_head(x[-1], self.cls_seg)
             return output
 
@@ -89,7 +98,7 @@ class BaselineDFFHead(BaseDecodeHead):
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
         gt_edge_segs = [
-            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
+            data_sample.gt_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
         gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
@@ -97,34 +106,27 @@ class BaselineDFFHead(BaseDecodeHead):
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, side5_logits, fuse_logits = logits
-        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits, hed_logits = logits
+        seg_label, hed_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        side5_logits = resize(
-            input=side5_logits,
-            size=bd_multi_label.shape[3:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        fuse_logits = resize(
-            input=fuse_logits,
-            size=bd_multi_label.shape[3:],
+        hed_logits = resize(
+            input=hed_logits,
+            size=hed_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
         seg_label = seg_label.squeeze(1)
-        bd_multi_label = bd_multi_label.squeeze(1)
+        hed_label = hed_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
-            side5_logits=side5_logits,
-            fuse_logits=fuse_logits
+            hed_logits=hed_logits,
         )
         loss = dict()
         loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
-        loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
+        loss['loss_hed'] = self.loss_decode[1](hed_logits, hed_label)
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

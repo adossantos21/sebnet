@@ -1,24 +1,27 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-
-from mmseg.models.utils import BaseSegHead
-from mmseg.models.utils import BEM_EarlierLayers as BEM
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmseg.models.losses import accuracy
-from mmseg.models.utils import resize
-
-from mmseg.registry import MODELS
-from .decode_head import BaseDecodeHead
-
-from typing import Tuple
-from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import (
+    resize, 
+    BaseSegHead, 
+    EdgeModuleConditioned_EarlierLayers as EdgeModule
+)
+from mmseg.registry import MODELS
+from mmseg.utils import OptConfigType, SampleList
+from .decode_head import BaseDecodeHead
+from typing import Tuple
 
 @MODELS.register_module()
-class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
-    """Baseline + BEM head for mapping feature to a predefined set
-    of classes.
+class Ablation15(BaseDecodeHead):
+    """
+    Ablations 15 - Baseline + Edge Earlier Layers Head based on PIDNet 
+    D Head, conditioned with a SBD supervisory signal. No fusion.
+    In contrast to Ablation 10, this head uses earlier layers 
+    (lower-level) to generate edge features. Edge width and
+    associated loss weight are held constant at 2 and 5.0, 
+    respectively, for fair comparison with Ablation 10.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -32,6 +35,8 @@ class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
     def __init__(self, 
                  in_channels: int = 256, 
                  num_classes: int = 19, 
+                 num_stem_blocks: int = 3,
+                 stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  eval_edges: bool = False,
@@ -43,20 +48,18 @@ class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
-        assert isinstance(in_channels, int)
-        assert isinstance(num_classes, int)
-        self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.stride = 1
+        assert isinstance(in_channels, int), f"Expected in_channels to be int, got {type(in_channels)}"
+        assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
+        assert isinstance(num_stem_blocks, int), f"Expected num_stem_blocks to be int, got {type(num_stem_blocks)}"
+        assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         self.eval_edges = eval_edges
-        self.bem = BEM(planes=self.in_channels // 4)
-        self.side5_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
-        self.fuse_head = BaseSegHead(in_channels // 2, in_channels // 2, self.stride, norm_cfg, act_cfg)
-        self.side5_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-        self.fuse_cls_seg = nn.Conv2d(in_channels // 2, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
+        if self.training or self.eval_edges:
+            self.edge_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
+            self.sbd_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.sbd_cls_seg = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1)
+        self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[Tensor]):
         """
         Forward function.
         x should be a tuple of outputs:
@@ -69,21 +72,20 @@ class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.bem(x) # side5 and fuse (N, C=128, H/4, W/4)
+            x_edges = self.edge_module(x) # x_edges: (N, 128, H/4, W/4)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            side5 = self.side5_head(side5, self.side5_cls_seg) # (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
-            fuse = self.fuse_head(fuse, self.fuse_cls_seg) # (N, K, H/4, W/4)
-            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
-            return tuple([output, side5, fuse])
+            sbd = self.sbd_head(x_edges, self.sbd_cls_seg) # sbd: (N, K, H/4, W/4), where K is the number of classes
+            output = self.seg_head(x[-1], self.cls_seg)
+            return tuple([output, sbd])
         else:
             if self.eval_edges:
-                _, fuse = self.bem(x)
-                output = self.fuse_head(fuse, self.fuse_cls_seg)
-                output = tuple([output])
+                x_edges = self.edge_module(x)
+                sbd = self.sbd_head(x_edges, self.sbd_cls_seg)
+                output = tuple([sbd])
             else:
                 x[-1] = F.interpolate(
                     x[-1],
@@ -92,48 +94,41 @@ class BaselineBEMHeadEarlierLayers(BaseDecodeHead):
                     align_corners=self.align_corners)
                 output = self.seg_head(x[-1], self.cls_seg)
             return output
-        
+
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
-        gt_edge_segs = [
+        gt_multi_edge_segs = [
             data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
-        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
-        return gt_sem_segs, gt_edge_segs
+        gt_multi_edge_segs = torch.stack(gt_multi_edge_segs, dim=0)
+        return gt_sem_segs, gt_multi_edge_segs
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, side5_logits, fuse_logits = logits
-        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits, sbd_logits = logits
+        seg_label, sbd_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        side5_logits = resize(
-            input=side5_logits,
-            size=bd_multi_label.shape[3:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        fuse_logits = resize(
-            input=fuse_logits,
-            size=bd_multi_label.shape[3:],
+        sbd_logits = resize(
+            input=sbd_logits,
+            size=sbd_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         seg_label = seg_label.squeeze(1)
-        bd_multi_label = bd_multi_label.squeeze(1)
+        sbd_label = sbd_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
-            side5_logits=side5_logits,
-            fuse_logits=fuse_logits
+            sbd_logits=sbd_logits,
         )
         loss = dict()
-        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
-        loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label) # formerly 'loss_ce'
+        loss['loss_sbd'] = self.loss_decode[1](sbd_logits, sbd_label) # formerly 'loss_bd'
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

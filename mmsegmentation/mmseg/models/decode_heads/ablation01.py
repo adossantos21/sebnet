@@ -1,25 +1,22 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Tuple
-from torch import Tensor
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch import Tensor
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import (
-    BaseSegHead, 
     resize,
+    BaseSegHead, 
 )
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType, ConfigType, SampleList
 from .decode_head import BaseDecodeHead
+from typing import List, Tuple
 
 @MODELS.register_module()
 class Ablation01(BaseDecodeHead):
     """
-    Ablation 01.
-    Vanilla head for mapping feature to a predefined set
-    of classes.
+    Ablation 01 - Baseline, without any additional head, 
+    supervised via an OHEM signal.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -48,7 +45,7 @@ class Ablation01(BaseDecodeHead):
         assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
         self.seg_head = BaseSegHead(in_channels, in_channels, stride, norm_cfg, act_cfg)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[Tensor]):
         """
         Forward function.
         x should be a tuple of outputs:

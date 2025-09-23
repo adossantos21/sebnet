@@ -1,26 +1,23 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-
-from mmseg.models.utils import (
-    BaseSegHead, 
-    PModuleConditioned_Pag2 as PModule
-)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmseg.models.losses import accuracy
-from mmseg.models.utils import resize
-
-from mmseg.registry import MODELS
-from .decode_head import BaseDecodeHead
-
-from typing import Tuple
-from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import (
+    resize,
+    BaseSegHead, 
+    PModuleConditioned_Pag2 as PModule
+)
+from mmseg.registry import MODELS
+from mmseg.utils import OptConfigType, SampleList
+from .decode_head import BaseDecodeHead
+from typing import Tuple
 
 @MODELS.register_module()
 class Ablation04(BaseDecodeHead):
     """
-    Ablation 04 - Baseline + P Head, with Pag1 supervised. No fusion used.
+    Ablation 04 - Baseline + P Head, with Pag1 supervised via 
+    an OHEM signal. No fusion used.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -56,7 +53,7 @@ class Ablation04(BaseDecodeHead):
             self.p_cls_seg = nn.Conv2d(in_channels, num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[Tensor]):
         """
         Forward function.
         x should be a tuple of outputs:

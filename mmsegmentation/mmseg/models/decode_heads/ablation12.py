@@ -1,23 +1,26 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-
-from mmseg.models.utils import BaseSegHead
-from mmseg.models.utils import DFF_EarlierLayers as DFF
 import torch
 import torch.nn.functional as F
-from mmseg.models.losses import accuracy
-from mmseg.models.utils import resize
-
-from mmseg.registry import MODELS
-from .decode_head import BaseDecodeHead
-
-from typing import Tuple
-from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
+from mmseg.models.losses import accuracy
+from mmseg.models.utils import (
+    resize, 
+    BaseSegHead, 
+    CASENet_EarlierLayers as EdgeModule
+)
+from mmseg.registry import MODELS
+from mmseg.utils import OptConfigType, SampleList
+from .decode_head import BaseDecodeHead
+from typing import Tuple
 
 @MODELS.register_module()
-class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
-    """Baseline + DFF head for mapping feature to a predefined set
-    of classes.
+class Ablation12(BaseDecodeHead):
+    """
+    Ablation 12 - Baseline + CASENet Earlier Layers Head, 
+    conditioned with two SBD supervisory signals for side5 
+    and fuse. No fusion. In contrast to Ablation 07, this
+    head uses earlier layers (lower-level) to generate 
+    edge features. See https://arxiv.org/pdf/1705.09759 
+    for more details. 
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -29,8 +32,9 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
     """
 
     def __init__(self, 
-                 in_channels=256, 
-                 num_classes=19, 
+                 in_channels: int = 256, 
+                 num_classes: int = 19, 
+                 stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  eval_edges: bool = False,
@@ -42,16 +46,15 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
-        assert isinstance(in_channels, int)
-        assert isinstance(num_classes, int)
-        self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.stride = 1
+        assert isinstance(in_channels, int), f"Expected in_channels to be int, got {type(in_channels)}"
+        assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
+        assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         self.eval_edges = eval_edges
-        self.dff = DFF(nclass=self.num_classes)
-        self.seg_head = BaseSegHead(in_channels, in_channels, self.stride, norm_cfg, act_cfg)
+        if self.training or self.eval_edges:
+            self.edge_module = EdgeModule(num_classes)
+        self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[Tensor]):
         """
         Forward function.
         x should be a tuple of outputs:
@@ -64,18 +67,18 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            side5, fuse = self.dff(x) # side5: (N, K, H/4, W/4), fuse: (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
+            side5, fuse = self.edge_module(x) # side5: (N, K, H/4, W/4), fuse: (N, K, H/4, W/4), where K is the number of classes in the labeled dataset
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
+            output = self.seg_head(x[-1], self.cls_seg)
             return tuple([output, side5, fuse])
         else:
             if self.eval_edges:
-                _, output = self.dff(x)
-                output = tuple([output])
+                sbd = self.edge_module(x)
+                output = tuple([sbd])
             else:
                 x[-1] = F.interpolate(
                     x[-1],
@@ -99,7 +102,7 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
         seg_logits, side5_logits, fuse_logits = logits
-        seg_label, bd_multi_label = self._stack_batch_gt(batch_data_samples)
+        seg_label, sbd_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
             size=seg_label.shape[2:],
@@ -107,16 +110,16 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
             align_corners=self.align_corners)
         side5_logits = resize(
             input=side5_logits,
-            size=bd_multi_label.shape[3:],
+            size=sbd_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         fuse_logits = resize(
             input=fuse_logits,
-            size=bd_multi_label.shape[3:],
+            size=sbd_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         seg_label = seg_label.squeeze(1)
-        bd_multi_label = bd_multi_label.squeeze(1)
+        sbd_label = sbd_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
             side5_logits=side5_logits,
@@ -124,8 +127,8 @@ class BaselineDFFHeadEarlierLayers(BaseDecodeHead):
         )
         loss = dict()
         loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_side5'] = self.loss_decode[1](side5_logits, bd_multi_label)
-        loss['loss_fuse'] = self.loss_decode[2](fuse_logits, bd_multi_label)
+        loss['loss_sbd_side5'] = self.loss_decode[1](side5_logits, sbd_label)
+        loss['loss_sbd_fuse'] = self.loss_decode[2](fuse_logits, sbd_label)
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits
