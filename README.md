@@ -32,6 +32,12 @@ For pre-training and fine-tuning ablations, see [reproduction.md](docs/reproduct
 
 ## Description
 
+Nomenclature:
+
+- Holistically-Nested Edge Detection [(HED)](https://arxiv.org/pdf/1504.06375.pdf)
+- Semantic Boundary Detection [(SBD)](https://arxiv.org/pdf/1705.09759)
+- Boundary Awareness [(BAS)](https://arxiv.org/pdf/2206.02066)
+
 The development of SEBNet was sequential and comprehensive. There are two stages.
 
 ### Stage 1 - Pre-training
@@ -43,47 +49,65 @@ To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDN
 ### Stage 2 - Finetuning
 
 Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 40 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone. An asterisk indicates the ablation study is complete.
+#### <ins>Section 01 - Train Baseline</ins>
 
 1.  **Ablation 01*** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
+
+#### <ins>Section 02 - Find best P Head</ins>
+
+Assume best P Head following this section.
+
 2.  **Ablation 02*** - Baseline + P Head (from PIDNet's P Branch)
 3.  **Ablation 03** - Baseline + P Head (Pag1 supervised, conditioning only)
 4.  **Ablation 04** - Baseline + P Head (Pag2 supervised, conditioning only)
 5.  **Ablation 05** - Baseline + P Head (Last layer supervised, conditioning only)
-6.  **Ablation 06*** - Baseline + D Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
-7.  **Ablation 07*** - Baseline + CASENet SBD Head, Edge Width 2, SBD Loss Weight 5.0
-8.  **Ablation 08*** - Baseline + DFF SBD Head, Edge Width 2, SBD Loss Weight 5.0
-9.  **Ablation 09*** - Baseline + BEM SBD Head, Edge Width 2, SBD Loss Weight 5.0
-10. **Ablation 10*** - Baseline + D Multi-Label SBD Head, Edge Width 2, SBD Loss Weight 5.0
-11. **Ablation 11*** - Baseline + D Earlier Layers Head (from PIDNet's D Branch), Edge Width 2, BD Loss Weight 5.0
-12. **Ablation 12*** - Baseline + CASENet Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-13. **Ablation 13*** - Baseline + DFF Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-14. **Ablation 14*** - Baseline + BEM Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-15. **Ablation 15*** - Baseline + D Multi-Label Earlier Layers SBD Head, Edge Width 2, SBD Loss Weight 5.0
-16. **Ablation 16*** - Baseline + SBD Head, Edge Width 1, SBD Loss Weight 5.0
-17. **Ablation 17*** - Baseline + SBD Head, Edge Width 4, SBD Loss Weight 5.0
-18. **Ablation 18*** - Baseline + SBD Head, Edge Width 8, SBD Loss Weight 5.0
-19. **Ablation 19*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 1.0
-20. **Ablation 20*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 10.0
-21. **Ablation 21*** - Baseline + SBD Head, Best Edge Width, SBD Loss Weight 20.0
-22. **Ablation 22*** - Baseline + D Head (Conditioned) + SBD Head (Conditioned)
-23. **Ablation 23** - Baseline + P Head (Conditioned) + D Head (Conditioned), *Appendix ablation*
-24. **Ablation 24** - Baseline + P Head (Fused) + D Head (Conditioned), *Appendix ablation*
-25. **Ablation 25*** - Baseline + P Head (Fused) + D Head (Fused), *Appendix ablation*
-26. **Ablation 26** - Baseline + P Head (Conditioned) + SBD Head (Conditioned)
-27. **Ablation 27*** - Baseline + P Head (Fused) + SBD Head (Conditioned)
-28. **Ablation 28*** - Baseline + P Head (Fused) + SBD Head (Fused)
-29. **Ablation 29** - Baseline + P Head (Conditioned) + D Head (Conditioned) + BAS Loss, *Appendix ablation*
-30. **Ablation 30** - Baseline + P Head (Fused) + D Head (Conditioned) + BAS Loss, *Appendix ablation*
-31. **Ablation 31*** - Baseline + P Head (Fused) + D Head (Fused) + BAS Loss (PIDNet), *Needed for study comparison*
-32. **Ablation 32** - Baseline + P Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
-33. **Ablation 33*** - Baseline + P Head (Fused) + SBD Head (Conditioned) + BAS Loss
-34. **Ablation 34*** - Baseline + P Head (Fused) + SBD Head (Fused) + BAS Loss
-35. **Ablation 35** - Baseline + P Head (Conditioned) + D Head (Conditioned) + SBD Head (Conditioned)
-36. **Ablation 36** - Baseline + P Head (Fused) + D Head (Conditioned) + SBD Head (Conditioned)
-37. **Ablation 37*** - Baseline + P Head (Fused) + D Head (Fused) + SBD Head (Conditioned)
-38. **Ablation 38** - Baseline + P Head (Conditioned) + D Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
-39. **Ablation 39** - Baseline + P Head (Fused) + D Head (Conditioned) + SBD Head (Conditioned) + BAS Loss
-40. **Ablation 40*** - Baseline + P Head (Fused) + D Head (Fused) + SBD Head (Conditioned) + BAS Loss (PIDNet + SBD)
+
+#### <ins>Section 03 - Find best Edge Head</ins>
+
+Following this section, "Edge Head" will be the best edge architecture determined during these ablation studies. Note that any given head can have multiple loss signals, e.g., HED loss signal, SBD loss signal, BAS loss signal, OHEM (variant of Cross Entropy) loss signal, etc.
+
+6.  **Ablation 06*** - Baseline + Edge Head (from PIDNet's D Branch), HED Signal, Edge Width 2, BD Loss Weight 5.0
+7.  **Ablation 07*** - Baseline + CASENet Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+8.  **Ablation 08*** - Baseline + DFF Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+9.  **Ablation 09*** - Baseline + BEM Head, SBD Signal Edge Width 2, SBD Loss Weight 5.0
+10. **Ablation 10*** - Baseline + Edge Head (from PIDNet's D Branch), SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+11. **Ablation 11*** - Baseline + Edge Earlier Layers Head (from PIDNet's D Branch), HED Signal, Edge Width 2, BD Loss Weight 5.0
+12. **Ablation 12*** - Baseline + CASENet Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+13. **Ablation 13*** - Baseline + DFF Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+14. **Ablation 14*** - Baseline + BEM Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+15. **Ablation 15*** - Baseline + Edge Earlier Layers Head (from PIDNet's D Branch), SBD Signal, Edge Width 2, SBD Loss Weight 5.0
+16. **Ablation 16*** - Baseline + Best Edge Head, SBD Signal, Edge Width 1, SBD Loss Weight 5.0
+17. **Ablation 17*** - Baseline + Best Edge Head, SBD Signal, Edge Width 4, SBD Loss Weight 5.0
+18. **Ablation 18*** - Baseline + Best Edge Head, SBD Signal, Edge Width 8, SBD Loss Weight 5.0
+19. **Ablation 19*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 1.0
+20. **Ablation 20*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 10.0
+21. **Ablation 21*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 20.0
+
+#### <ins>Section 04 - Condition vs Fusion Grid Search</ins>
+
+***Conditioning*** involves attaching an auxiliary head and corresponding signal to your baseline architecture during training. While the model trains, learned features from the auxiliary head backwards propagate into the backbone of your baseline, creating a shared representation. During evaluation, the shared representation preserved in the backbone allows us to detach the auxiliary head, preventing latency overhead. "(Conditioned)" will indicate that the corresponding head was only used to backwards propagate learned features into the backbone. *All edge heads in the prior section were tested via conditioning*.
+
+***Fusion*** also involves attaching an auxiliary head and corresponding signal to your baseline architecture during training. The main difference being that the deepest features of the auxiliary head are used in a feature fusion module (FFM) to create the shared representation. During evaluation, the auxiliary head is not detached, introducing latency overhead. "(Fused)" will indicate that the corresponding head's deepest features were fused with the output of the backbone via a FFM.
+
+22. **Ablation 22*** - Baseline + Edge Head, HED and SBD Signals
+23. **Ablation 23** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
+24. **Ablation 24** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
+25. **Ablation 25*** - Baseline + P Head (Fused) + Edge Head (Fused), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
+26. **Ablation 26** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), SBD Signal
+27. **Ablation 27*** - Baseline + P Head (Fused) + Edge Head (Conditioned), SBD Signal
+28. **Ablation 28*** - Baseline + P Head (Fused) + Edge Head (Fused), SBD Signal
+29. **Ablation 29** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED and BAS Signals, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
+30. **Ablation 30** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED and BAS Signals, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
+31. **Ablation 31*** - Baseline + P Head (Fused) + D Head (Fused), HED and BAS Signals (PIDNet equivalent), *Needed for study comparison*
+32. **Ablation 32** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), SBD and BAS Signals
+33. **Ablation 33*** - Baseline + P Head (Fused) + Edge Head (Conditioned), SBD and BAS Signals
+34. **Ablation 34*** - Baseline + P Head (Fused) + Edge Head (Fused), SBD and BAS Signals
+35. **Ablation 35** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED and SBD Signals
+36. **Ablation 36** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED and SBD Signals
+37. **Ablation 37*** - Baseline + P Head (Fused) + Edge Head (Fused), HED and SBD Signals
+38. **Ablation 38** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED, SBD, and BAS Signals
+39. **Ablation 39** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED, SBD, and BAS Signals
+40. **Ablation 40*** - Baseline + P Head (Fused) + Edge Head (Fused), HED, SBD, and BAS Signals (PIDNet + SBD)
 41. **Ablation 41** - Best Model + Mapillary Pre-training
 
 ## Results
