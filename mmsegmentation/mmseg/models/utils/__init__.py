@@ -38,10 +38,12 @@ from .aux_modules import (
     DFF,
     BEM,
     MIMIR,
-    EdgeModule_EarlierLayers,
+    EdgeModuleFused_EarlierLayers,
+    EdgeModuleConditioned_EarlierLayers,
     CASENet_EarlierLayers,
     DFF_EarlierLayers,
     BEM_EarlierLayers,
+    MIMIR_EarlierLayers,
 )
 
 __all__ = [
@@ -51,10 +53,10 @@ __all__ = [
     'Upsample', 'resize', 'DAPPM', 'PAPPM', 'BasicBlock', 'Bottleneck',
     'cross_attn_layer', 'LayerNorm2d', 'MLP', 'BottleneckExp2', 'LayerNorm2dSAN',
     'get_uncertain_point_coords_with_randomness', "PagFM", "Bag", "LightBag",
-    "PIFusion", "PModuleFused", "EdgeModuleFused", "CASENet", "DFF", "BEM", 
-    "ConvNeXtBlock", "GRN", "build_norm_layer", "BaseSegHead", "MIMIR", 
-    "CASENet_EarlierLayers", "DFF_EarlierLayers", "BEM_EarlierLayers", 
-    "EdgeModule_EarlierLayers", "EdgeModuleConditioned", 
-    "PModuleConditioned_Pag1", "PModuleConditioned_Pag2", 
-    "PModuleConditioned_LastLayer", "BaseConv",
+    "PIFusion", "PModuleFused", "EdgeModuleFused", "EdgeModuleConditioned", 
+    "CASENet", "DFF", "BEM", "ConvNeXtBlock", "GRN", "build_norm_layer", 
+    "BaseSegHead", "MIMIR", "CASENet_EarlierLayers", "DFF_EarlierLayers", 
+    "BEM_EarlierLayers", "MIMIR_EarlierLayers", "EdgeModuleFused_EarlierLayers", 
+    "EdgeModuleConditioned_EarlierLayers", "PModuleConditioned_Pag1", 
+    "PModuleConditioned_Pag2", "PModuleConditioned_LastLayer", "BaseConv",
 ]
