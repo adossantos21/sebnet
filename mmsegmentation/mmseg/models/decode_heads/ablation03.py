@@ -1,6 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
-from mmseg.models.utils import BaseSegHead, PModule, PIFusion
+from mmseg.models.utils import (
+    BaseSegHead, 
+    PModuleConditioned_Pag1 as PModule,
+)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,9 +18,9 @@ from mmseg.utils import OptConfigType, SampleList
 from torch import Tensor
 
 @MODELS.register_module()
-class BaselinePHead(BaseDecodeHead):
-    """Baseline + P head for mapping feature to a predefined set
-    of classes.
+class Ablation03(BaseDecodeHead):
+    """
+    Ablation 03 - Baseline + P Head, with Pag1 supervised. No fusion used.
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -32,6 +35,7 @@ class BaselinePHead(BaseDecodeHead):
                  in_channels: int = 256, 
                  num_classes: int = 19, 
                  num_stem_blocks: int = 3,
+                 stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
@@ -42,18 +46,15 @@ class BaselinePHead(BaseDecodeHead):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
-        assert isinstance(in_channels, int)
-        assert isinstance(num_classes, int)
-        self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.stride = 1
-        self.num_stem_blocks = num_stem_blocks
-        self.p_module = PModule(channels=self.in_channels // 4, num_stem_blocks=self.num_stem_blocks)
-        self.fusion = PIFusion(self.in_channels, self.in_channels, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+        assert isinstance(in_channels, int), f"Expected in_channels to be int, got {type(in_channels)}"
+        assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
+        assert isinstance(num_stem_blocks, int), f"Expected num_stem_blocks to be int, got {type(num_stem_blocks)}"
+        assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         if self.training:
-            self.p_head = BaseSegHead(self.in_channels // 2, self.in_channels, self.stride, norm_cfg, act_cfg)
-            self.p_cls_seg = nn.Conv2d(self.in_channels, self.num_classes, kernel_size=1)
-        self.seg_head = BaseSegHead(self.in_channels, self.in_channels, self.stride, norm_cfg, act_cfg)
+            self.p_module = PModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks)
+            self.p_head = BaseSegHead(in_channels // 2, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
+            self.p_cls_seg = nn.Conv2d(in_channels, num_classes, kernel_size=1)
+        self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
     def forward(self, x):
         """
@@ -68,26 +69,23 @@ class BaselinePHead(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            temp_p, x_p = self.p_module(x) # temp_p: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
-            p_supervised = self.p_head(temp_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+            x_p = self.p_module(x)
+            p_supervised = self.p_head(x_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            feats = self.fusion(x_p, x[-1])
-            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, p_supervised])
         else:
-            x_p = self.p_module(x)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners
             )
-            feats = self.fusion(x_p, x[-1])
-            output = self.seg_head(feats, self.cls_seg)
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return output
         
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tensor:

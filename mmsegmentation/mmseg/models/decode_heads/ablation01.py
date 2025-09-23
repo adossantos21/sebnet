@@ -6,14 +6,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from mmseg.models.losses import accuracy
-from mmseg.models.utils import BaseSegHead, resize
+from mmseg.models.utils import (
+    BaseSegHead, 
+    resize,
+)
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType, ConfigType, SampleList
 from .decode_head import BaseDecodeHead
 
 @MODELS.register_module()
-class BaselineHead(BaseDecodeHead):
-    """Vanilla head for mapping feature to a predefined set
+class Ablation01(BaseDecodeHead):
+    """
+    Ablation 01.
+    Vanilla head for mapping feature to a predefined set
     of classes.
 
     Args:
@@ -27,24 +32,21 @@ class BaselineHead(BaseDecodeHead):
 
     def __init__(self, 
                  in_channels: int = 256,
-                 channels: int = 256,
                  num_classes: int = 19,
+                 stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  **kwargs):
         super().__init__(
             in_channels,
-            channels,
+            in_channels,
             num_classes=num_classes,
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
-        assert isinstance(in_channels, int)
-        assert isinstance(num_classes, int)
-        self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.stride = 1
-        self.seg_head = BaseSegHead(in_channels, channels, self.stride, norm_cfg, act_cfg)
+        assert isinstance(in_channels, int), f"Expected in_channels to be int, got {type(in_channels)}"
+        assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
+        self.seg_head = BaseSegHead(in_channels, in_channels, stride, norm_cfg, act_cfg)
 
     def forward(self, x):
         """
