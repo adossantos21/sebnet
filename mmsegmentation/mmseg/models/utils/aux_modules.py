@@ -72,7 +72,7 @@ class BaseSegHead(BaseModule):
             x = cls_seg(x)
         return x
 
-class PModule(CustomBaseModule):
+class PModuleFused(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
 
@@ -168,7 +168,7 @@ class PModule(CustomBaseModule):
         
         return tuple([temp_p, x_p]) if self.training else x_p
     
-class PModule_Pag1(CustomBaseModule):
+class PModuleConditioned_Pag1(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
 
@@ -247,7 +247,7 @@ class PModule_Pag1(CustomBaseModule):
         
         return tuple([x_p])
     
-class PModule_Pag2(CustomBaseModule):
+class PModuleConditioned_Pag2(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
 
@@ -340,7 +340,7 @@ class PModule_Pag2(CustomBaseModule):
         
         return tuple([x_p])
     
-class PModule_LastLayer(CustomBaseModule):
+class PModuleConditioned_LastLayer(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
 
@@ -437,7 +437,7 @@ class PModule_LastLayer(CustomBaseModule):
         return tuple([x_p])
 
 
-class DModule(CustomBaseModule):
+class EdgeModuleFused(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     '''
@@ -545,7 +545,7 @@ class DModule(CustomBaseModule):
         x_d = self.d_branch_layers[2](self.relu(x_d))
         return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
 
-class SBDModule(CustomBaseModule):
+class EdgeModuleConditioned(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     '''
@@ -840,7 +840,7 @@ class BEM(CustomBaseModule):
         
         return tuple(outputs)
     
-class DModule_EarlierLayers(CustomBaseModule):
+class EdgeModule_EarlierLayers(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     Difference being that we convolve earlier layers.
