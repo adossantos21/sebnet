@@ -31,6 +31,7 @@ class Ablation08(BaseDecodeHead):
     def __init__(self, 
                  in_channels: int = 256, 
                  num_classes: int = 19,
+                 num_stem_blocks: int = 3,
                  stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),

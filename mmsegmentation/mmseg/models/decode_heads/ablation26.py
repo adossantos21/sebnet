@@ -6,7 +6,7 @@ from mmseg.models.losses import accuracy
 from mmseg.models.utils import (
     resize,
     BaseSegHead,
-    PModuleConditioned as PModule,
+    PModuleConditioned_Pag2 as PModule,
     EdgeModuleConditioned as EdgeModule,
 )
 from mmseg.registry import MODELS
