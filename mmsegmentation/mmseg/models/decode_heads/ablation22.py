@@ -74,13 +74,13 @@ class Ablation22(BaseDecodeHead):
         """
         if self.training:
             x_edges = self.edge_module(x) # x_edges: (N, 128, H/8, W/8)
-            hed = self.hed_head(x_edges, self.hed_cls_seg) # (N, 1, H/8, W/8)
-            sbd = self.sbd_head(x_edges, self.sbd_cls_seg) # (N, K, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
+            hed = self.hed_head(x_edges, self.hed_cls_seg) # (N, 1, H/8, W/8)
+            sbd = self.sbd_head(x_edges, self.sbd_cls_seg) # (N, K, H/8, W/8)
             output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, hed, sbd])
         else:
