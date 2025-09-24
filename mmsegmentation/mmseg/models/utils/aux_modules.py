@@ -543,7 +543,13 @@ class EdgeModuleFused(CustomBaseModule):
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-        return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        if self.training:
+            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        else:
+            if self.eval_edges:
+                return temp_d
+            else:
+                return x_d
 
 class EdgeModuleConditioned(CustomBaseModule):
     '''
@@ -1050,7 +1056,13 @@ class EdgeModuleFused_EarlierLayers(CustomBaseModule):
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-        return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        if self.training:
+            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        else:
+            if self.eval_edges:
+                return temp_d
+            else:
+                return x_d
 
 class EdgeModuleConditioned_EarlierLayers(CustomBaseModule):
     '''
