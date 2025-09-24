@@ -57,7 +57,7 @@ class Ablation10(BaseDecodeHead):
             self.sbd_cls_seg = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x: Tuple[Tensor]):
+    def forward(self, x: Tuple[Tensor, ...]):
         """
         Forward function.
         x should be a tuple of outputs:

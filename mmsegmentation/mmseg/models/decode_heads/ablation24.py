@@ -64,7 +64,7 @@ class Ablation24(BaseDecodeHead):
         self.pre_head = PreHead(in_channels, in_channels, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
-    def forward(self, x: Tuple[Tensor]):
+    def forward(self, x: Tuple[Tensor, ...]):
         """
         Forward function.
         x should be a tuple of outputs:

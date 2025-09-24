@@ -45,7 +45,7 @@ class Ablation01(BaseDecodeHead):
         assert isinstance(num_classes, int), f"Expected num_classes to be int, got {type(num_classes)}"
         self.seg_head = BaseSegHead(in_channels, in_channels, stride, norm_cfg, act_cfg)
 
-    def forward(self, x: Tuple[Tensor]):
+    def forward(self, x: Tuple[Tensor, ...]):
         """
         Forward function.
         x should be a tuple of outputs:
