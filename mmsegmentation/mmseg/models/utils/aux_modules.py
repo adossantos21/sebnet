@@ -72,7 +72,7 @@ class BaseSegHead(BaseModule):
             x = cls_seg(x)
         return x
 
-class PModule(CustomBaseModule):
+class PModuleFused(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
 
@@ -167,9 +167,277 @@ class PModule(CustomBaseModule):
         x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
         
         return tuple([temp_p, x_p]) if self.training else x_p
+    
+class PModuleConditioned_Pag1(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(1):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+            #temp_p = x_p.clone() # (N, 128, H/8, W/8)
+        
+        return tuple([x_p])
+    
+class PModuleConditioned_Pag2(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(2):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.compression_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+        self.pag_2 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+        #    temp_p = x_p.clone() # (N, 128, H/8, W/8)
+
+        # stage 4
+        x_p = self.p_branch_layers[1](self.relu(x_p))
+
+        comp_i = self.compression_2(x_3)
+        x_p = self.pag_2(x_p, comp_i)
+        
+        return tuple([x_p])
+    
+class PModuleConditioned_LastLayer(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
+
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    # Optionally add argument `train` to constructor and pass `self.training` to it from the appropriate head module.
+    # Another option is to register these modules if you need to.
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.align_corners = align_corners
+
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(3):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck,
+                    in_channels=channels * 2,
+                    channels=channels * 2,
+                    num_blocks=num_stem_blocks if i < 2 else 1))
+        self.compression_1 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.compression_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(channels * 2, channels)
+        self.pag_2 = PagFM(channels * 2, channels)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i)
+        #if self.training:
+        #    temp_p = x_p.clone() # (N, 128, H/8, W/8)
+
+        # stage 4
+        x_p = self.p_branch_layers[1](self.relu(x_p))
+
+        comp_i = self.compression_2(x_3)
+        x_p = self.pag_2(x_p, comp_i)
+
+        # stage 5
+        x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
+        
+        return tuple([x_p])
 
 
-class DModule(CustomBaseModule):
+class EdgeModuleFused(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     '''
@@ -275,9 +543,15 @@ class DModule(CustomBaseModule):
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-        return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        if self.training:
+            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        else:
+            if self.eval_edges:
+                return temp_d
+            else:
+                return x_d
 
-class SBDModule(CustomBaseModule):
+class EdgeModuleConditioned(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     '''
@@ -379,7 +653,7 @@ class SBDModule(CustomBaseModule):
         if self.training or self.eval_edges:
             temp_d = x_d.clone()
 
-        return temp_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        return temp_d # temp_d: (N, 128, H/8, W/8)
 
 class CASENet(CustomBaseModule):
     '''
@@ -426,9 +700,7 @@ class CASENet(CustomBaseModule):
 
         fuse = self.fuse(fuse)
 
-        outputs = [side5, fuse]
-
-        return tuple(outputs)
+        return tuple([side5, fuse]) if self.training else fuse
     
 class DFF(CustomBaseModule):
     '''
@@ -489,9 +761,7 @@ class DFF(CustomBaseModule):
         fuse = torch.mul(fuse, ada_weights) # (N, K, 4, H/8, W/8)
         fuse = torch.sum(fuse, 2) # (N, K, H/8, W/8)
 
-        outputs = [side5, fuse]
-
-        return tuple(outputs)
+        return tuple([side5, fuse]) if self.training else fuse
     
 class BEM(CustomBaseModule):
     '''
@@ -567,12 +837,105 @@ class BEM(CustomBaseModule):
         fuse = torch.mul(edge_5d, adaptive_weights) # (N, 128, 4, H/8, W/8)
         fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4)) # (N, 512, H/8, W/8)
         fuse = self.sep_conv(fuse) # (N, 128, H/8, W/8)
+        
+        return tuple([Aside5, fuse]) if self.training else fuse
+
+class MIMIR(CustomBaseModule):
+    '''
+    Multi-scale Inverted Module for Image Refinement:
+    BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
+    Renamed MIMIR.
+    '''
+    def __init__(self, planes=64, norm_cfg=dict(type='LN2d', eps=1e-6), **kwargs):
+        #super().__init__()
+        super(MIMIR, self).__init__(planes, norm_cfg=norm_cfg, **kwargs)
+        self.norm_cfg = norm_cfg
+
+        # Side1: Downsampling projection + ConvNeXt block
+        self.side1_down = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes),
+            nn.Conv2d(planes, planes*2, kernel_size=3, stride=2, padding=1)
+        )
+        self.side1_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side2: Direct ConvNeXt block (same channels)
+        self.side2_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side3: Channel projection + ConvNeXt block
+        self.side3_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*4),
+            nn.Conv2d(planes*4, planes*2, kernel_size=1)
+        )
+        self.side3_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5: Channel projection + ConvNeXt block
+        self.side5_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16),
+            nn.Conv2d(planes*16, planes*2, kernel_size=1)
+        )
+        self.side5_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
+
+        # Side5_w: Channel projection + ConvNeXt block
+        self.side5_w_proj = nn.Sequential(
+            build_norm_layer(self.norm_cfg, planes*16),
+            nn.Conv2d(planes*16, planes*8, kernel_size=1)
+        )
+        self.side5_w_block = ConvNeXtBlock(in_channels=planes*8, norm_cfg=self.norm_cfg)
+
+        # Replace BasicBlock with ConvNeXtBlock
+        self.layer1 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+        self.layer2 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
+
+        # Adapted sep_conv with new norm
+        self.sep_conv = nn.Sequential(
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*8, kernel_size=3, padding=1, groups=planes*8, bias=True),
+            nn.Conv2d(in_channels=planes*8, out_channels=planes*2, kernel_size=1, bias=True),
+            build_norm_layer(self.norm_cfg, planes*2)[1],  # Extract the module
+            nn.ReLU(inplace=True)
+        )
+
+        self.adaptive_learner = LocationAdaptiveLearnerLN(planes*2, planes*8, planes*8, norm_cfg=self.norm_cfg)
+
+    def forward(self, x):
+        c1, c2, c3, _, c5, _ = x
+
+        '''Stage 1'''
+        Aside1 = self.side1_block(self.side1_down(c1))  # (N, 128, H/8, W/8)
+
+        '''Stage 2'''
+        Aside2 = self.side2_block(c2)  # (N, 128, H/8, W/8)
+        Aside2 = self.layer1(Aside1 + Aside2)  # (N, 128, H/8, W/8)
+        height, width = Aside2.shape[2:]
+
+        '''Stage 3'''
+        Aside3_proj = self.side3_proj(c3)  # Project channels
+        Aside3 = self.side3_block(Aside3_proj)  # (N, 128, H/16, W/16) -> but interpolate later
+        Aside3 = F.interpolate(Aside3, size=[height, width], mode='bilinear', align_corners=False)
+        Aside3 = self.layer2(Aside3 + Aside2)  # (N, 128, H/8, W/8)
+        
+        '''Stage 5'''
+        Aside5_proj = self.side5_proj(c5)
+        Aside5 = self.side5_block(Aside5_proj)
+        Aside5 = F.interpolate(Aside5, size=[height, width], mode='bilinear', align_corners=False)
+        Aside5 = Aside3 + Aside5  # (N, 128, H/8, W/8)
+
+        Aside5_w_proj = self.side5_w_proj(c5)
+        Aside5_w = self.side5_w_block(Aside5_w_proj)
+        Aside5_w = F.interpolate(Aside5_w, size=[height, width], mode='bilinear', align_corners=False)
+        
+        '''Fuse Sides 1-3 and 5'''
+        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2)  # (N, 128, 4, H/8, W/8)
+        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1)  # (N, 512, H/8, W/8)
+        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3))  # (N, 128, 4, H/8, W/8)
+        fuse = torch.mul(edge_5d, adaptive_weights)  # (N, 128, 4, H/8, W/8)
+        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4))  # (N, 512, H/8, W/8)
+        fuse = self.sep_conv(fuse)  # (N, 128, H/8, W/8)
 
         outputs = [Aside5, fuse]
         
         return tuple(outputs)
-    
-class DModule_EarlierLayers(CustomBaseModule):
+
+class EdgeModuleFused_EarlierLayers(CustomBaseModule):
     '''
     Model layers for the D branch of PIDNet.
     Difference being that we convolve earlier layers.
@@ -693,7 +1056,131 @@ class DModule_EarlierLayers(CustomBaseModule):
 
         # stage 5
         x_d = self.d_branch_layers[2](self.relu(x_d))
-        return tuple([temp_d, x_d]) if self.training or self.eval_edges else x_d # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        if self.training:
+            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        else:
+            if self.eval_edges:
+                return temp_d
+            else:
+                return x_d
+
+class EdgeModuleConditioned_EarlierLayers(CustomBaseModule):
+    '''
+    Model layers for the D branch of PIDNet.
+    Difference being that we convolve earlier layers.
+    '''
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
+        self.align_corners = align_corners
+        self.eval_edges = eval_edges
+
+        self.relu = nn.ReLU()
+
+        # D Branch
+        if num_stem_blocks == 2:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2, channels),
+                self._make_layer(Bottleneck, channels, channels, 1)
+            ])
+            channel_expand = 1
+        else:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2,
+                                        channels * 2),
+                self._make_single_layer(BasicBlock, channels * 2, channels * 2)
+            ])
+            channel_expand = 2
+        
+        self.diff_0 = ConvModule(
+            channels,
+            channels * channel_expand,
+            kernel_size=3, # optionally change to 1, with no padding for faster computation. Not much of a speedup though.
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+        self.diff_1 = ConvModule(
+            channels * 2,
+            channels * channel_expand,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+        self.diff_2 = ConvModule(
+            channels * 4,
+            channels * 2,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        """
+        """
+        Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        """
+        x_0, x_1, x_2, x_3, _, _ = x
+
+        w_out = x[1].shape[-1]
+        h_out = x[1].shape[-2]
+
+        # stage 3
+        diff_i = self.diff_0(x_0)
+        x_d = F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        x_d = self.d_branch_layers[0](x_d)
+
+        diff_i = self.diff_1(x_1)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+
+        # stage 4
+        x_d = self.d_branch_layers[1](self.relu(x_d))
+
+        diff_i = self.diff_2(x_2)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        #if self.training or self.eval_edges:
+        #    temp_d = x_d.clone()
+
+        return x_d # x_: (N, 128, H/8, W/8)
 
 class CASENet_EarlierLayers(CustomBaseModule):
     '''
@@ -741,9 +1228,7 @@ class CASENet_EarlierLayers(CustomBaseModule):
 
         fuse = self.fuse(fuse)
 
-        outputs = [side5, fuse]
-
-        return tuple(outputs)
+        return tuple([side5, fuse]) if self.training else fuse
     
 class DFF_EarlierLayers(CustomBaseModule):
     '''
@@ -799,9 +1284,7 @@ class DFF_EarlierLayers(CustomBaseModule):
         fuse = torch.mul(fuse, ada_weights) # (N, K, 4, H/4, W/4)
         fuse = torch.sum(fuse, 2) # (N, K, H/4, W/4)
 
-        outputs = [side5, fuse]
-
-        return tuple(outputs)
+        return tuple([side5, fuse]) if self.training else fuse
 
 
 class BEM_EarlierLayers(CustomBaseModule):
@@ -880,12 +1363,10 @@ class BEM_EarlierLayers(CustomBaseModule):
         fuse = torch.mul(edge_5d, adaptive_weights) # (N, 128, 4, H/4, W/4)
         fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4)) # (N, 512, H/4, W/4)
         fuse = self.sep_conv(fuse) # (N, 128, H/4, W/4)
-
-        outputs = [Aside5, fuse]
         
-        return tuple(outputs)
+        return tuple([Aside5, fuse]) if self.training else fuse
     
-class MIMIR(CustomBaseModule):
+class MIMIR_EarlierLayers(CustomBaseModule):
     '''
     Multi-scale Inverted Module for Image Refinement:
     BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
@@ -987,101 +1468,6 @@ class MIMIR(CustomBaseModule):
         fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4))  # (N, 512, H/4, W/4)
         fuse = self.sep_conv(fuse)  # (N, 128, H/4, W/4)
         
-        outputs = [Aside5, fuse]
-        
-        return tuple(outputs)
-
-class MIMIRLikePIDNetDBranch(CustomBaseModule):
-    '''
-    Multi-scale Inverted Module for Image Refinement:
-    BEM using Inverted Residual ConvNeXt blocks for side branches and layers.
-    Renamed MIMIR.
-    '''
-    def __init__(self, planes=64, norm_cfg=dict(type='LN2d', eps=1e-6), **kwargs):
-        #super().__init__()
-        super(MIMIRLikePIDNetDBranch, self).__init__(planes, norm_cfg=norm_cfg, **kwargs)
-        self.norm_cfg = norm_cfg
-
-        # Side1: Downsampling projection + ConvNeXt block
-        self.side1_down = nn.Sequential(
-            build_norm_layer(self.norm_cfg, planes),
-            nn.Conv2d(planes, planes*2, kernel_size=3, stride=2, padding=1)
-        )
-        self.side1_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
-
-        # Side2: Direct ConvNeXt block (same channels)
-        self.side2_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
-
-        # Side3: Channel projection + ConvNeXt block
-        self.side3_proj = nn.Sequential(
-            build_norm_layer(self.norm_cfg, planes*4),
-            nn.Conv2d(planes*4, planes*2, kernel_size=1)
-        )
-        self.side3_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
-
-        # Side5: Channel projection + ConvNeXt block
-        self.side5_proj = nn.Sequential(
-            build_norm_layer(self.norm_cfg, planes*16),
-            nn.Conv2d(planes*16, planes*2, kernel_size=1)
-        )
-        self.side5_block = ConvNeXtBlock(in_channels=planes*2, norm_cfg=self.norm_cfg)
-
-        # Side5_w: Channel projection + ConvNeXt block
-        self.side5_w_proj = nn.Sequential(
-            build_norm_layer(self.norm_cfg, planes*16),
-            nn.Conv2d(planes*16, planes*8, kernel_size=1)
-        )
-        self.side5_w_block = ConvNeXtBlock(in_channels=planes*8, norm_cfg=self.norm_cfg)
-
-        # Replace BasicBlock with ConvNeXtBlock
-        self.layer1 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
-        self.layer2 = ConvNeXtBlock(planes*2, norm_cfg=self.norm_cfg)
-
-        # Adapted sep_conv with new norm
-        self.sep_conv = nn.Sequential(
-            nn.Conv2d(in_channels=planes*8, out_channels=planes*8, kernel_size=3, padding=1, groups=planes*8, bias=True),
-            nn.Conv2d(in_channels=planes*8, out_channels=planes*2, kernel_size=1, bias=True),
-            build_norm_layer(self.norm_cfg, planes*2)[1],  # Extract the module
-            nn.ReLU(inplace=True)
-        )
-
-        self.adaptive_learner = LocationAdaptiveLearnerLN(planes*2, planes*8, planes*8, norm_cfg=self.norm_cfg)
-
-    def forward(self, x):
-        c1, c2, c3, _, c5, _ = x
-
-        '''Stage 1'''
-        Aside1 = self.side1_block(self.side1_down(c1))  # (N, 128, H/8, W/8)
-
-        '''Stage 2'''
-        Aside2 = self.side2_block(c2)  # (N, 128, H/8, W/8)
-        Aside2 = self.layer1(Aside1 + Aside2)  # (N, 128, H/8, W/8)
-        height, width = Aside2.shape[2:]
-
-        '''Stage 3'''
-        Aside3_proj = self.side3_proj(c3)  # Project channels
-        Aside3 = self.side3_block(Aside3_proj)  # (N, 128, H/16, W/16) -> but interpolate later
-        Aside3 = F.interpolate(Aside3, size=[height, width], mode='bilinear', align_corners=False)
-        Aside3 = self.layer2(Aside3 + Aside2)  # (N, 128, H/8, W/8)
-        
-        '''Stage 5'''
-        Aside5_proj = self.side5_proj(c5)
-        Aside5 = self.side5_block(Aside5_proj)
-        Aside5 = F.interpolate(Aside5, size=[height, width], mode='bilinear', align_corners=False)
-        Aside5 = Aside3 + Aside5  # (N, 128, H/8, W/8)
-
-        Aside5_w_proj = self.side5_w_proj(c5)
-        Aside5_w = self.side5_w_block(Aside5_w_proj)
-        Aside5_w = F.interpolate(Aside5_w, size=[height, width], mode='bilinear', align_corners=False)
-        
-        '''Fuse Sides 1-3 and 5'''
-        adaptive_weights = F.softmax(self.adaptive_learner(Aside5_w), dim=2)  # (N, 128, 4, H/8, W/8)
-        concat = torch.cat((Aside1, Aside2, Aside3, Aside5), dim=1)  # (N, 512, H/8, W/8)
-        edge_5d = concat.view(concat.size(0), -1, 4, concat.size(2), concat.size(3))  # (N, 128, 4, H/8, W/8)
-        fuse = torch.mul(edge_5d, adaptive_weights)  # (N, 128, 4, H/8, W/8)
-        fuse = fuse.view(fuse.size(0), -1, fuse.size(3), fuse.size(4))  # (N, 512, H/8, W/8)
-        fuse = self.sep_conv(fuse)  # (N, 128, H/8, W/8)
-
         outputs = [Aside5, fuse]
         
         return tuple(outputs)

@@ -35,29 +35,50 @@ from .setr_up_head import SETRUPHead
 from .stdc_head import STDCHead
 from .uper_head import UPerHead
 from .vpd_depth_head import VPDDepthHead
-from .base_head import BaselineHead
-from .base_p_head import BaselinePHead
-from .base_d_head import BaselineDHead
-from .base_dmultilabel_head import BaselineDMultiLabelHead
-from .base_casenet_head import BaselineCASENetHead
-from .base_dff_head import BaselineDFFHead
-from .base_bem_head import BaselineBEMHead
-from .base_d_head_earlier_layers import BaselineDHeadEarlierLayers
-from .base_dmultilabel_head_earlier_layers import BaselineDMultiLabelHeadEarlierLayers
-from .base_casenet_head_earlier_layers import BaselineCASENetHeadEarlierLayers
-from .base_dff_head_earlier_layers import BaselineDFFHeadEarlierLayers
-from .base_bem_head_earlier_layers import BaselineBEMHeadEarlierLayers
-from .base_mimir_head import BaselineMIMIRHead
-from .base_p_d_head import BaselinePDHead
-from .base_d_sbd_head import BaselineDSBDHead
-from .base_p_sbd_head_conditioned import ConditionalBaselinePSBDHead
-from .base_p_sbd_head_fused import BagBaselinePSBDHead
-from .base_p_sbd_bas_head_conditioned import ConditionalBaselinePSBDBASHead
-from .base_p_sbd_bas_head_fused import BagBaselinePSBDBASHead
-from .base_p_d_bas_head import BaselinePDBASHead
-from .base_p_d_sbd_head import BaselinePDSBDHead
-from .base_p_d_sbd_bas_head import BaselinePDSBDBASHead
-from .base_p_d_sbd_basWithSBD_head import BaselinePDSBDBASWithSBDHead
+from .ablation01 import Ablation01
+from .ablation02 import Ablation02
+from .ablation03 import Ablation03
+from .ablation04 import Ablation04
+from .ablation05 import Ablation05
+from .ablation06 import Ablation06
+from .ablation07 import Ablation07
+from .ablation08 import Ablation08
+from .ablation09 import Ablation09
+from .ablation10 import Ablation10
+from .ablation11 import Ablation11
+from .ablation12 import Ablation12
+from .ablation13 import Ablation13
+from .ablation14 import Ablation14
+from .ablation15 import Ablation15
+from .ablation22 import Ablation22
+from .ablation23 import Ablation23
+from .ablation24 import Ablation24
+from .ablation25 import Ablation25
+from .ablation26 import Ablation26
+from .ablation27 import Ablation27
+from .ablation28 import Ablation28
+from .ablation29 import Ablation29
+from .ablation30 import Ablation30
+from .ablation31 import Ablation31
+from .ablation32 import Ablation32
+from .ablation33 import Ablation33
+from .ablation34 import Ablation34
+from .ablation35 import Ablation35
+from .ablation36 import Ablation36
+from .ablation37 import Ablation37
+from .ablation38 import Ablation38
+from .ablation39 import Ablation39
+from .ablation40 import Ablation40
+from .ablation41 import Ablation41
+from .ablation42 import Ablation42
+from .ablation43 import Ablation43
+from .ablation44 import Ablation44
+from .ablation45 import Ablation45
+from .ablation46 import Ablation46
+from .ablation47 import Ablation47
+from .ablation48 import Ablation48
+from .ablation49 import Ablation49
+
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -68,13 +89,13 @@ __all__ = [
     'SegformerHead', 'ISAHead', 'STDCHead', 'IterativeDecodeHead',
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
-    'BaselineHead', 'BaselinePHead', 'BaselineDHead', 'BaselineCASENetHead',
-    'BaselineDFFHead', 'BaselineBEMHead', 'BaselinePDHead',
-    'BaselineDSBDHead', 'BaselinePDBASHead', 'BaselinePDSBDHead',
-    'BaselinePDSBDBASHead', 'BaselineMIMIRHead', 'BaselineDMultiLabelHead',
-    'ConditionalBaselinePSBDHead', 'BagBaselinePSBDHead',
-    'BaselineDHeadEarlierLayers', 'BaselineDMultiLabelHeadEarlierLayers',
-    'BaselineCASENetHeadEarlierLayers', 'BaselineDFFHeadEarlierLayers',
-    'BaselineBEMHeadEarlierLayers', 'ConditionalBaselinePSBDBASHead',
-    'BagBaselinePSBDBASHead', 'BaselinePDSBDBASWithSBDHead'
+    'Ablation01', 'Ablation02', 'Ablation03', 'Ablation04', 'Ablation05',
+    'Ablation06', 'Ablation07', 'Ablation08', 'Ablation09', 'Ablation10',
+    'Ablation11', 'Ablation12', 'Ablation13', 'Ablation14', 'Ablation15',
+    'Ablation22', 'Ablation23', 'Ablation24', 'Ablation25', 'Ablation26',
+    'Ablation27', 'Ablation28', 'Ablation29', 'Ablation30', 'Ablation31',
+    'Ablation32', 'Ablation33', 'Ablation34', 'Ablation35', 'Ablation36',
+    'Ablation37', 'Ablation38', 'Ablation39', 'Ablation40', 'Ablation41',
+    'Ablation42', 'Ablation43', 'Ablation44', 'Ablation45', 'Ablation46',
+    'Ablation47', 'Ablation48', 'Ablation49',
 ]
