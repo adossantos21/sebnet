@@ -5,7 +5,7 @@ For Semantic Boundary Detection (SBD), we have the CASENet, DFF, and BGF modules
 '''
 
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, Sequence
 
 import torch
 import torch.nn as nn
@@ -71,7 +71,153 @@ class BaseSegHead(BaseModule):
         if cls_seg is not None:
             x = cls_seg(x)
         return x
+    
+class PModuleScaled(CustomBaseModule):
+    '''
+    Model layers for the P branch of PIDNet. 
 
+    Args:
+        in_channels (int): The number of input channels. Default: 3.
+        channels (int): The number of channels in the stem layer. Default: 64.
+        ppm_channels (int): The number of channels in the PPM layer.
+            Default: 96.
+        num_stem_blocks (int): The number of blocks in the stem layer.
+            Default: 2.
+        num_branch_blocks (int): The number of blocks in the branch layer.
+            Default: 3.
+        align_corners (bool): The align_corners argument of F.interpolate.
+            Default: False.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer.
+            Default: dict(type='ReLU', inplace=True).
+        init_cfg (dict): Config dict for initialization. Default: None.
+    '''
+    arch_settings = {
+        'base': {
+            'depths': [2, 2, 1],
+            'channels': [128, 128, 128]
+        },
+        'small': {
+            'depths': [3, 3, 3],
+            'channels': [128, 128, 128]
+        },
+        'medium': {
+            'depths': [3, 3, 6],
+            'channels': [128, 128, 128]
+        },
+        'large': {
+            'depths': [3, 3, 9],
+            'channels': [128, 128, 128]
+        },
+        'xlarge': {
+            'depths': [3, 3, 9],
+            'channels': [192, 192, 192] # success
+        },
+        'test': {
+            'depths': [3, 4, 4],
+            'channels': [192, 192, 192]
+        }
+    }
+
+    def __init__(self,
+                 arch='base',
+                 in_channels: int = 128,
+                 align_corners: bool = False,
+                 init_cfg: OptConfigType = None,
+                 **kwargs):
+        super().__init__(init_cfg)
+        if isinstance(arch, str):
+            assert arch in self.arch_settings, \
+                f'Arch does not exist, please choose from ' \
+                f'({set(self.arch_settings)}) or pass a dict with ' \
+                f'"depths" and "channels" keys.'
+            arch = self.arch_settings[arch]
+        elif isinstance(arch, dict):
+            assert 'depths' in arch and 'channels' in arch, \
+            f'The arch dict must have "depths" and "channels", ' \
+            f'but got {list(arch.keys())}.'
+        
+        self.depths = arch['depths']
+        self.channels = arch['channels']
+        assert (isinstance(self.depths, Sequence)
+                and isinstance(self.channels, Sequence)
+                and len(self.depths) == len(self.channels) == 3), \
+            f'The "depths" ({self.depths}) and "channels" ({self.channels}) ' \
+            f'should both be sequences of length 3.'
+        
+        self.num_stages = len(self.depths)
+        self.align_corners = align_corners
+        self.relu = nn.ReLU()
+
+        # P Branch
+        self.p_branch_layers = nn.ModuleList()
+        for i in range(3):
+            self.p_branch_layers.append(
+                self._make_layer(
+                    block=BasicBlock if i < 2 else Bottleneck, # TODO: Delete this if statement pending ablation studies 3-5, since you only iterate twice for Pag2_Conditioned
+                    in_channels=in_channels,
+                    channels=self.channels[i],
+                    num_blocks=self.depths[i]))
+        self.compression_1 = ConvModule(
+            in_channels * 2,
+            in_channels,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.compression_2 = ConvModule(
+            in_channels * 4,
+            in_channels,
+            kernel_size=1,
+            bias=False,
+            norm_cfg=self.norm_cfg,
+            act_cfg=None)
+        self.pag_1 = PagFM(in_channels, in_channels // 2)
+        self.pag_2 = PagFM(in_channels, in_channels // 2)
+
+    def forward(self, x: Tuple[Tensor, ...]) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        
+        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
+        and BaseDecodeHead objects. Its boolean is inherited based on whether the
+        train loop or the test/val loops are executing.
+        
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        
+        """
+        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+
+        # stage 3
+        x_p = self.p_branch_layers[0](x_1)
+
+        comp_i = self.compression_1(x_2)
+        x_p = self.pag_1(x_p, comp_i) # (N, 128, H/8, W/8)
+
+        # stage 4
+        x_p = self.p_branch_layers[1](self.relu(x_p))
+
+        comp_i = self.compression_2(x_3)
+        x_p = self.pag_2(x_p, comp_i) # (N, 128, H/8, W/8)
+        
+        # stage 5
+        x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
+        
+        return tuple([x_p])
+    
 class PModuleFused(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 

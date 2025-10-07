@@ -28,6 +28,7 @@ from .fusion_modules import (
 
 from .aux_modules import (
     BaseSegHead,
+    PModuleScaled,
     PModuleFused,
     PModuleConditioned_Pag1,
     PModuleConditioned_Pag2,
@@ -59,4 +60,5 @@ __all__ = [
     "BEM_EarlierLayers", "MIMIR_EarlierLayers", "EdgeModuleFused_EarlierLayers", 
     "EdgeModuleConditioned_EarlierLayers", "PModuleConditioned_Pag1", 
     "PModuleConditioned_Pag2", "PModuleConditioned_LastLayer", "BaseConv",
+    "PModuleScaled",
 ]

@@ -53,8 +53,16 @@ class SEBNet(BaseBackbone):
             'channels': [64, 128, 256, 512, 1024]
         },
         'xlarge': {
-            'depths': [3, 3, 3, 27, 3],
-            'channels': [64, 128, 256, 512, 1024]
+            'depths': [3, 3, 3, 9, 3],
+            'channels': [96, 192, 384, 768, 1536] # success
+        },
+        'xxlarge': {
+            'depths': [3, 3, 3, 9, 3],
+            'channels': [128, 256, 512, 1024, 2048]
+        },
+        'test': {
+            'depths': [3, 3, 4, 4, 2],
+            'channels': [64, 192, 384, 768, 1536]
         }
     }
 

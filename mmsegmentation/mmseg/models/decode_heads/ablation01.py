@@ -33,6 +33,7 @@ class Ablation01(BaseDecodeHead):
                  stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,

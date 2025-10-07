@@ -35,6 +35,7 @@ class Ablation03(BaseDecodeHead):
                  stride: int = 1,
                  norm_cfg: OptConfigType = dict(type='SyncBN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -67,7 +68,7 @@ class Ablation03(BaseDecodeHead):
         """
         if self.training:
             x_p = self.p_module(x)
-            p_supervised = self.p_head(x_p, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
+            p_supervised = self.p_head(x_p[0], self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
