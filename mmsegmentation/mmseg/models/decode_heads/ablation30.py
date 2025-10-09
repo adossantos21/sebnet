@@ -145,8 +145,7 @@ class Ablation30(BaseDecodeHead):
             hed_logits=hed_logits
         )
         loss = dict()
-        loss['loss_seg_p'] = self.loss_decode[0](
-            p_logits, seg_label, ignore_index=self.ignore_index)
+        loss['loss_seg_p'] = self.loss_decode[0](p_logits, seg_label)
         loss['loss_seg'] = self.loss_decode[1](seg_logits, seg_label)
         loss['loss_hed'] = self.loss_decode[2](hed_logits, hed_label)
         filler = torch.ones_like(seg_label) * self.ignore_index
