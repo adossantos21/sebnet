@@ -18,11 +18,11 @@ model = dict(
                 loss_name='loss_seg'),
             dict(
                 type='BoundaryLoss', 
-                loss_weight=10.0,
+                loss_weight=5.0,
                 loss_name='loss_hed'),
             dict(
                 type='MultiLabelEdgeLoss',
-                loss_weight=20.0,
+                loss_weight=5.0,
                 loss_name='loss_sbd'),
         ]
     )
