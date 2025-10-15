@@ -170,9 +170,11 @@ class Ablation49(BaseDecodeHead):
         loss['loss_hed'] = self.loss_decode[2](hed_logits, hed_label)
         loss['loss_sbd'] = self.loss_decode[3](sbd_logits, sbd_label)
         filler = torch.ones_like(seg_label) * self.ignore_index
-        seg_hed_label = torch.where(
-            torch.sigmoid(hed_logits[:, 0, :, :]) > 0.8, seg_label, filler)
-        loss['loss_bas'] = self.loss_decode[4](seg_logits, seg_hed_label)
+        #seg_hed_label = torch.where(
+        #    torch.sigmoid(hed_logits[:, 0, :, :]) > 0.8, seg_label, filler)
+        seg_sbd_label = torch.where(
+            torch.sigmoid(torch.max(sbd_logits, dim=1)[0]) > 0.8, seg_label, filler)
+        loss['loss_bas'] = self.loss_decode[4](seg_logits, seg_sbd_label)
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits
