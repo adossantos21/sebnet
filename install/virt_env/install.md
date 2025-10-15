@@ -52,8 +52,8 @@ git clone git@github.com:adossantos21/sebnet.git
 
    Execute the following commands:
     ```
-    chmod +x install/initialize.sh
-    ./install/initialize.sh
+    chmod +x install/virt_env/initialize.sh
+    ./install/virt_env/initialize.sh
     ```
     - This will install remaining packages for MMPretrain and MMSegmentation
     - It will also resolve an MMCV Conflict between MMPretrain and MMSegmentation
