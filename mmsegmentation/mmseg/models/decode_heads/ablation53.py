@@ -4,12 +4,9 @@ import torch.nn.functional as F
 from torch import Tensor
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import (
-    resize,
-    BaseSegHead,
-    PModuleFused as PModule,
-    EdgeModuleConditioned as HEDModule,
-    EdgeModuleFused as SBDModule,
-    Bag as PreHead
+    resize, 
+    BaseSegHead, 
+    EdgeModuleConditioned as EdgeModule
 )
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType, SampleList
@@ -17,14 +14,14 @@ from .decode_head import BaseDecodeHead
 from typing import Tuple
 
 @MODELS.register_module()
-class Ablation49(BaseDecodeHead):
+class Ablation53(BaseDecodeHead):
     """
-    Ablation 49 - Baseline + P Head (Fused) + Edge Head (Conditioned, HED)
-    + Edge Head (Fused, SBD), with HED, SBD, and BAS supervisory signals. 
-    Fusion present in P Head and Edge Head. See Holistically-Nested Edge 
-    Detection at https://arxiv.org/pdf/1504.06375, Semantic Boundary 
-    Detection at https://arxiv.org/pdf/1705.09759, and Boundary-Awareness 
-    at https://arxiv.org/pdf/2206.02066 for more details.
+    Ablation 53 - Baseline + Edge Head (HED) + Edge Head (SBD), 
+    conditioned with BAS, HED and SBD Signals. No fusion. See 
+    Holistically-Nested Edge Detection (HED) 
+    at https://arxiv.org/pdf/1504.06375.pdf and Semantic Boundary 
+    Detection (SBD) at https://arxiv.org/pdf/1705.09759 for more 
+    details. 
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -56,18 +53,13 @@ class Ablation49(BaseDecodeHead):
         assert isinstance(num_stem_blocks, int), f"Expected num_stem_blocks to be int, got {type(num_stem_blocks)}"
         assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         self.eval_edges = eval_edges
-        if self.training:
-            self.p_head = BaseSegHead(in_channels // 2, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
-            self.p_cls_seg = nn.Conv2d(in_channels, num_classes, kernel_size=1)
         if self.training or self.eval_edges:
-            self.hed_module = HEDModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
+            self.hed_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
             self.hed_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.hed_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
-            self.sbd_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.sbd_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
+            self.sbd_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg)
             self.sbd_cls_seg = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1)
-        self.p_module = PModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks)
-        self.sbd_module = SBDModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
-        self.pre_head = PreHead(in_channels, in_channels, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
     def forward(self, x: Tuple[Tensor, ...]):
@@ -83,37 +75,30 @@ class Ablation49(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            x_p_feats, x_p = self.p_module(x) # x_p_feats: (N, 128, H/8, W/8), x_p: (N, 256, H/8, W/8)
             x_hed = self.hed_module(x) # x_hed: (N, 128, H/8, W/8)
-            x_sbd, x_d = self.sbd_module(x) # x_sbd: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+            x_sbd = self.sbd_module(x) # x_sbd: (N, 128, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            x_p_supervised = self.p_head(x_p_feats, self.p_cls_seg) # (N, K, H/8, W/8), where K is the number of classes in the labeled dataset
             hed = self.hed_head(x_hed, self.hed_cls_seg) # (N, 1, H/8, W/8)
             sbd = self.sbd_head(x_sbd, self.sbd_cls_seg) # (N, K, H/8, W/8)
-            feats = self.pre_head(x_p, x[-1], x_d)
-            output = self.seg_head(feats, self.cls_seg) # (N, K, H/8, W/8)
-            return tuple([output, x_p_supervised, hed, sbd])
+            output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
+            return tuple([output, hed, sbd])
         else:
             if self.eval_edges:
-                x_hed = self.hed_module(x)
-                x_sbd = self.sbd_module(x)
-                hed = self.hed_head(x_hed, self.hed_cls_seg)
-                sbd = self.sbd_head(x_sbd, self.sbd_cls_seg)
+                x_edges = self.edge_module(x)
+                hed = self.hed_head(x_edges, self.hed_cls_seg)
+                sbd = self.sbd_head(x_edges, self.sbd_cls_seg)
                 output = tuple([hed, sbd])
             else:
-                x_p = self.p_module(x)
-                x_d = self.sbd_module(x)
                 x[-1] = F.interpolate(
                     x[-1],
                     size=x[1].shape[2:],
                     mode='bilinear',
                     align_corners=self.align_corners)
-                feats = self.pre_head(x_p, x[-1], x_d)
-                output = self.seg_head(feats, self.cls_seg)
+                output = self.seg_head(x[-1], self.cls_seg)
             return output
 
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
@@ -133,15 +118,10 @@ class Ablation49(BaseDecodeHead):
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, p_logits, hed_logits, sbd_logits = logits
+        seg_logits, hed_logits, sbd_logits = logits
         seg_label, hed_label, sbd_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
-            size=seg_label.shape[2:],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        p_logits = resize(
-            input=p_logits,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
@@ -160,21 +140,19 @@ class Ablation49(BaseDecodeHead):
         sbd_label = sbd_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
-            p_logits=p_logits,
             hed_logits=hed_logits,
             sbd_logits=sbd_logits
         )
         loss = dict()
         loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_seg_p'] = self.loss_decode[1](p_logits, seg_label)
-        loss['loss_hed'] = self.loss_decode[2](hed_logits, hed_label)
-        loss['loss_sbd'] = self.loss_decode[3](sbd_logits, sbd_label)
+        loss['loss_hed'] = self.loss_decode[1](hed_logits, hed_label)
+        loss['loss_sbd'] = self.loss_decode[2](sbd_logits, sbd_label)
         filler = torch.ones_like(seg_label) * self.ignore_index
-        #seg_hed_label = torch.where(
-        #    torch.sigmoid(hed_logits[:, 0, :, :]) > 0.8, seg_label, filler)
-        seg_sbd_label = torch.where(
-            torch.sigmoid(torch.max(sbd_logits, dim=1)[0]) > 0.8, seg_label, filler)
-        loss['loss_bas'] = self.loss_decode[4](seg_logits, seg_sbd_label)
+        seg_hed_label = torch.where(
+            torch.sigmoid(hed_logits[:, 0, :, :]) > 0.8, seg_label, filler)
+        #seg_sbd_label = torch.where(
+        #    torch.sigmoid(torch.max(sbd_logits, dim=1)[0]) > 0.8, seg_label, filler)
+        loss['loss_bas'] = self.loss_decode[3](seg_logits, seg_hed_label)
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

@@ -1,5 +1,6 @@
 # python tools/test.py path/to/your_config.py path/to/your_checkpoint.pth --eval mIoU
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=2
 python tools/test.py \
-    configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py \
-    SBD/ablation25/ckpt/240K/best_mIoU.pth
+    /home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/configs/sebnet/sebnet_ablation40_1xb6-160k_mapillary.py \
+    /home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_2xb6_mapillaryv2/20250916_135803/checkpoints/remapped_checkpoint.pth
+    #/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_2xb6_mapillaryv2/20250916_155205/checkpoints/remapped_checkpoint.pth

@@ -6,11 +6,8 @@ class_weight = [
 ]
 crop_size = (1024, 1024)
 model = dict(
-    backbone=dict(
-        init_cfg=None,
-    ),
     decode_head=dict(
-        type='Ablation33',
+        type='Ablation41',
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
@@ -20,12 +17,9 @@ model = dict(
                 loss_weight=1.0,
                 loss_name='loss_seg'),
             dict(
-                type='OhemCrossEntropy',
-                thres=0.9,
-                min_kept=131072,
-                class_weight=class_weight,
-                loss_weight=0.4,
-                loss_name='loss_seg_p'),
+                type='BoundaryLoss', 
+                loss_weight=5.0,
+                loss_name='loss_hed'),
             dict(
                 type='MultiLabelEdgeLoss',
                 loss_weight=5.0,
@@ -51,9 +45,8 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
+    dict(type='GenerateEdge', edge_width=4),
     dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
-
-load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_2xb6_mapillaryv2/20250916_155205/checkpoints/remapped_checkpoint.pth'
