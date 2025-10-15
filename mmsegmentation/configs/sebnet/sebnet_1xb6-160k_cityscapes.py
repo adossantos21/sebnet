@@ -71,7 +71,7 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
 
-iters = 160000
+iters = 241000 # 160000
 val_interval=1000
 
 optim_wrapper = dict(
