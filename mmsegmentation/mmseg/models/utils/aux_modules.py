@@ -421,12 +421,13 @@ class PModuleConditioned_Pag2(CustomBaseModule):
                  num_stem_blocks: int = 2,
                  align_corners: bool = False,
                  init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(init_cfg)
         self.align_corners = align_corners
 
         self.relu = nn.ReLU()
-
+        self.eval_edges = eval_edges
         # P Branch
         self.p_branch_layers = nn.ModuleList()
         for i in range(2):
@@ -484,7 +485,10 @@ class PModuleConditioned_Pag2(CustomBaseModule):
         comp_i = self.compression_2(x_3)
         x_p = self.pag_2(x_p, comp_i)
         
-        return tuple([x_p])
+        if self.training or self.eval_edges:
+            temp_p = x_p.clone()
+
+        return temp_p
     
 class PModuleConditioned_LastLayer(CustomBaseModule):
     '''
