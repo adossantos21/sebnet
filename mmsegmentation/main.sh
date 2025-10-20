@@ -1,4 +1,4 @@
 unset DISPLAY
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
-python tools/train.py configs/sebnet/sebnet_ablation39_1xb6-160k_cityscapes.py
+python tools/train.py configs/sebnet/sebnet_ablation55_1xb6-160k_cityscapes.py
