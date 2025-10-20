@@ -79,6 +79,10 @@ from .ablation47 import Ablation47
 from .ablation48 import Ablation48
 from .ablation49 import Ablation49
 from .ablation51 import Ablation51
+from .ablation52 import Ablation52
+from .ablation53 import Ablation53
+from .ablation54 import Ablation54
+from .ablation55 import Ablation55
 
 
 __all__ = [
@@ -98,5 +102,5 @@ __all__ = [
     'Ablation32', 'Ablation33', 'Ablation34', 'Ablation35', 'Ablation36',
     'Ablation37', 'Ablation38', 'Ablation39', 'Ablation40', 'Ablation41',
     'Ablation42', 'Ablation43', 'Ablation44', 'Ablation45', 'Ablation46',
-    'Ablation47', 'Ablation48', 'Ablation49', 'Ablation51'
+    'Ablation47', 'Ablation48', 'Ablation49', 'Ablation51', 'Ablation54', 'Ablation55'
 ]

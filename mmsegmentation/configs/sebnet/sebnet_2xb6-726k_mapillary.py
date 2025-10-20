@@ -106,9 +106,9 @@ train_pipeline = [
     dict(type='PhotoMetricDistortion'),
     dict(type='PackSegInputs')
 ]
-train_dataloader = dict(batch_size=6, dataset=dict(data_rot=data_root, pipeline=train_pipeline))
+train_dataloader = dict(batch_size=12, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 
-iters = 1452000 // 2 # 2 gpus
+iters = 181500 # 2 gpus
 val_interval=1000
 
 optim_wrapper = dict(
