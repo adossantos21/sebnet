@@ -28,8 +28,19 @@ def parse_args():
     parser.add_argument('--num_classes', type=int, default=19)
     parser.add_argument('--dataset_dir', type=str, default='/path/to/cityscapes/gtFine/train/*/*_labelTrainIds.png')
     parser.add_argument('--ignore_index', type=int, default=255)
+    parser.add_argument('--cam_vid', action='store_true')
     args = parser.parse_args()
     return args
+
+def color2label(color_map, ignore_label=255):
+    color_list = [[0, 128, 192], [128, 0, 0], [64, 0, 128],
+                  [192, 192, 128], [64, 64, 128], [64, 64, 0],
+                  [128, 64, 128], [0, 0, 192], [192, 128, 128],
+                  [128, 128, 128], [128, 128, 0]]
+    label = np.ones(color_map.shape[:2])*ignore_label
+    for i, v in enumerate(color_list):
+        label[(color_map == v).sum(2)==3] = i
+    return label.astype(np.uint8)
 
 def weights_log(counts: Dict[str, int], num_classes: int) -> torch.Tensor:
     class_freq = torch.FloatTensor(list(counts.values()))
@@ -56,6 +67,8 @@ def main():
         for file in tqdm(label_files, desc='Processing labels', total=num_images):
             # Load the label image (grayscale)
             img = np.array(Image.open(file))
+            if args.cam_vid:
+                img = color2label(img, ignore_label=255)
             h, w = img.shape
             unique, counts = np.unique(img, return_counts=True)
             for u, c in zip(unique, counts):
