@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 python tools/analysis_tools/generate_edge_predictions.py \
     configs/sebnet/sebnet_baseline-p-d-bas-head_1xb6_cityscapes.py \
     ../../../paper_2/mmsegmentation/SBD/ablation25/ckpt/160K/best_mIoU.pth \
