@@ -88,9 +88,10 @@ class Ablation41(BaseDecodeHead):
             return tuple([output, hed, sbd])
         else:
             if self.eval_edges:
-                x_edges = self.edge_module(x)
-                hed = self.hed_head(x_edges, self.hed_cls_seg)
-                sbd = self.sbd_head(x_edges, self.sbd_cls_seg)
+                x_hed_edges = self.hed_module(x)
+                x_sbd_edges = self.sbd_module(x)
+                hed = self.hed_head(x_hed_edges, self.hed_cls_seg)
+                sbd = self.sbd_head(x_sbd_edges, self.sbd_cls_seg)
                 output = tuple([hed, sbd])
             else:
                 x[-1] = F.interpolate(
