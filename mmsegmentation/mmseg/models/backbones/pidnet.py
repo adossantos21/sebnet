@@ -234,7 +234,7 @@ class PIDNet(BaseModule):
                  num_branch_blocks: int = 3,
                  align_corners: bool = False,
                  norm_cfg: OptConfigType = dict(type='BN'),
-                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=False),
                  init_cfg: OptConfigType = None,
                  **kwargs):
         super().__init__(init_cfg)
@@ -470,11 +470,11 @@ class PIDNet(BaseModule):
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
         """
-        w_out = x.shape[-1] // 8
-        h_out = x.shape[-2] // 8
 
         # stage 0-2
         x = self.stem(x)
+        w_out = x.shape[-1]
+        h_out = x.shape[-2]
 
         # stage 3
         x_i = self.relu(self.i_branch_layers[0](x))

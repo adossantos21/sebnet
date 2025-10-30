@@ -1,3 +1,4 @@
+preds/*
 mmpretrain/z_test_work_dir/*
 *.json
 

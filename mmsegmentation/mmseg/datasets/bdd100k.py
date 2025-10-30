@@ -20,7 +20,7 @@ class BDD100KDataset(BaseSegDataset):
 
     def __init__(self,
                  img_suffix='.jpg',
-                 seg_map_suffix='.png',
+                 seg_map_suffix='_train_id.png',
                  reduce_zero_label=False,
                  **kwargs) -> None:
         super().__init__(
