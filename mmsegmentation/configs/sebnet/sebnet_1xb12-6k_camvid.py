@@ -71,8 +71,8 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=12, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 
-iters = 6200
-val_interval=100
+iters = 18600 #6200
+val_interval=50
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.

@@ -9,7 +9,7 @@ model = dict(
         init_cfg=dict(checkpoint=checkpoint_file)),
     decode_head=dict(in_channels=256, channels=256))
 
-iters = 6200
+iters = 6200 * 2 # 6200 original
 val_interval = 50
 
 param_scheduler = [

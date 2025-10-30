@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import os.path as osp
+import torch
 
 from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
@@ -97,6 +98,7 @@ def main():
         runner = RUNNERS.build(cfg)
 
     # start training
+    torch.autograd.set_detect_anomaly(True)
     runner.train()
 
 

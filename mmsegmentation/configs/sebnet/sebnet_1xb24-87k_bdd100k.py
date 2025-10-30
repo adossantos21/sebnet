@@ -82,7 +82,7 @@ train_dataloader = dict(
     )
 )
 
-iters = 87000
+iters = 87000 * 3
 val_interval=1000
 
 optim_wrapper = dict(
