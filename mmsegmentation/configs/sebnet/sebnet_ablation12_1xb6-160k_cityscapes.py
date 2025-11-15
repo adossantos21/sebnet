@@ -56,4 +56,4 @@ train_pipeline = [
 ]
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
 
-load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_2xb6_mapillaryv2/20250916_155205/checkpoints/remapped_checkpoint.pth'
+load_from = 'path/to/mapillary/checkpoint.pth'

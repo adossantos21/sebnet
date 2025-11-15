@@ -121,7 +121,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/CamVid/train/0001TP_009390.png',
+        img_name='data/CamVid/train/0001TP_009390.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'

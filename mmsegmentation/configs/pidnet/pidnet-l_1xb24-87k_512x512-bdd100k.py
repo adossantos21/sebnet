@@ -40,4 +40,4 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
 ]
 
-load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-l_1xb6-241k_1024x1024-cityscapes/20251105_161036/checkpoints/best_mIoU.pth'
+load_from = 'path/to/cityscapes/checkpoint.pth'

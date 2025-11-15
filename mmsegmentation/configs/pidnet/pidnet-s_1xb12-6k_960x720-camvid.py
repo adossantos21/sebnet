@@ -7,7 +7,7 @@ class_weight = [
     1.1171, 0.8749, 0.9845, 1.0579, 1.0247, 1.0960, 0.8641, 0.9382, 1.2307,
     0.8955, 0.9165
 ]
-data_root = "/home/robert.breslin/datasets/CamVid"
+data_root = "data/CamVid"
 checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/pidnet/pidnet-s_imagenet1k_20230306-715e6273.pth'  # noqa
 
 # preprocessing configuration
@@ -126,7 +126,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/CamVid/train/0001TP_009390.png',
+        img_name='data/CamVid/train/0001TP_009390.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'
@@ -139,7 +139,7 @@ randomness = dict(seed=304)
 log_level = 'INFO'
 
 # load from which checkpoint
-load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-s_1xb6-241k_1024x1024-cityscapes/20251105_160949/checkpoints/best_mIoU.pth'
+load_from = 'path/to/cityscapes/checkpoint.pth'
 
 # whether to resume training from the loaded checkpoint
 resume = False

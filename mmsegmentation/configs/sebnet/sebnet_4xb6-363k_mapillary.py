@@ -27,8 +27,8 @@ _base_ = [
     '../_base_/datasets/mapillary_v2.py',
     '../_base_/default_runtime.py'
 ]
-checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
-data_root = '/home/robert.breslin/datasets/mapillary_vistas/'
+checkpoint_file = "path/to/imagenet/checkpoint.pth"
+data_root = 'data/mapillary_vistas/'
 
 class_weight = [
     1.3348, 1.1980, 1.3508, 0.8861, 0.8473, 0.8291, 0.8951, 1.1403, 0.9788,
@@ -158,7 +158,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
+        img_name='data/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'

@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/bdd100k.py',
     '../_base_/default_runtime.py'
 ]
-data_root = "/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg"
+data_root = "data/bdd100k_seg/bdd100k/seg"
 class_weight = [
     0.8238, 0.9277, 0.8431, 1.0055, 0.9627, 0.9685, 1.0660, 1.0259, 0.8433,
     0.9627, 0.8324, 1.0446, 1.2297, 0.8637, 0.9659, 0.9969, 1.2663, 1.2163,
@@ -83,8 +83,8 @@ train_dataloader = dict(
     dataset=dict(
         data_root=data_root, 
         data_prefix=dict(
-            img_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/images/train',
-            seg_map_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/train'
+            img_path='data/bdd100k_seg/bdd100k/seg/images/train',
+            seg_map_path='data/bdd100k_seg/bdd100k/seg/labels/train'
         ),
     pipeline=train_pipeline
     )
@@ -118,8 +118,8 @@ val_dataloader = dict(
     dataset=dict(
         data_root=data_root,
         data_prefix=dict(
-            img_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/images/val',
-            seg_map_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/val'
+            img_path='data/bdd100k_seg/bdd100k/seg/images/val',
+            seg_map_path='data/bdd100k_seg/bdd100k/seg/labels/val'
         ),
         pipeline=test_pipeline,
     )
@@ -150,7 +150,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/train/0a0eaeaf-9ad0c6dd_train_id.png',
+        img_name='data/bdd100k_seg/bdd100k/seg/labels/train/0a0eaeaf-9ad0c6dd_train_id.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'
@@ -163,7 +163,7 @@ randomness = dict(seed=304)
 log_level = 'INFO'
 
 # load from which checkpoint
-load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-s_1xb6-241k_1024x1024-cityscapes/20251105_160949/checkpoints/best_mIoU.pth'
+load_from = 'path/to/cityscapes/checkpoint.pth'
 
 # whether to resume training from the loaded checkpoint
 resume = False

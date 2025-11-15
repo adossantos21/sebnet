@@ -1,6 +1,5 @@
 '''
 File Name: compute_dataset_class_weights.py
-Author: Alessandro Dos Santos
 Description:
 The original Cityscapes Dataset's class weights for balancing class imbalance are:
 class_weight = [

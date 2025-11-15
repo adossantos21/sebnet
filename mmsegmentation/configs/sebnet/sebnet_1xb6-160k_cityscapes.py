@@ -7,7 +7,7 @@ _base_ = [
 iters = 240000 # 160000
 val_interval=1000
 
-imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
+imagenet_checkpoint_file = "path/to/imagenet/checkpoint.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
@@ -123,7 +123,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
+        img_name='data/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'

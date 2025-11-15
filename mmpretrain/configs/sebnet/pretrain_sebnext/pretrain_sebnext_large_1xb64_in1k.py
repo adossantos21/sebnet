@@ -7,7 +7,7 @@ model = dict(
 )
 
 # load from which checkpoint
-load_from = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain_sebnext_large_1xb64_in1k/epoch_11.pth'
+load_from = 'path/to/checkpoint.pth'
 
 # whether to resume training from the loaded checkpoint
 resume = True

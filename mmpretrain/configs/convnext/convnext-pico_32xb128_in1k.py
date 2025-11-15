@@ -20,4 +20,4 @@ custom_hooks = [dict(type='EMAHook', momentum=1e-4, priority='ABOVE_NORMAL')]
 # NOTE: `auto_scale_lr` is for automatically scaling LR
 # based on the actual training batch size.
 # base_batch_size = (32 GPUs) x (128 samples per GPU)
-auto_scale_lr = dict(base_batch_size=128) # originally 4096, changed by Alex
+auto_scale_lr = dict(base_batch_size=128) # originally 4096

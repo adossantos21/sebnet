@@ -35,7 +35,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
+        img_name='data/cityscapes/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'
