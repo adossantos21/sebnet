@@ -1,4 +1,4 @@
 unset DISPLAY
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 
-python tools/train.py configs/pidnet/pidnet-m_1xb6-241k_1024x1024-cityscapes.py
+python tools/train.py configs/pidnet/pidnet-s_1xb24-87k_512x512-bdd100k.py

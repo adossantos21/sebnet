@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=0
 python tools/analysis_tools/get_flops.py \
-    configs/stdc/stdc2_in1k-pre_4xb12-80k_cityscapes-512x1024.py \
+    configs/pidnet/pidnet-l_1xb6-241k_1024x1024-cityscapes.py \
     --shape 2048 1024

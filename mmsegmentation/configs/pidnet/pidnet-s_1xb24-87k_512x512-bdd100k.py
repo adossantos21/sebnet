@@ -105,6 +105,14 @@ param_scheduler = [
         end=iters,
         by_epoch=False)
 ]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='Resize', scale=(1280, 720), keep_ratio=True),
+    # add loading annotation after ``Resize`` because ground truth
+    # does not need to do resize data transform
+    dict(type='LoadAnnotations'),
+    dict(type='PackSegInputs')
+]
 val_dataloader = dict(
     batch_size=1, 
     dataset=dict(
@@ -112,7 +120,8 @@ val_dataloader = dict(
         data_prefix=dict(
             img_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/images/val',
             seg_map_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/val'
-        )
+        ),
+        pipeline=test_pipeline,
     )
 )
 test_dataloader = val_dataloader
@@ -154,7 +163,7 @@ randomness = dict(seed=304)
 log_level = 'INFO'
 
 # load from which checkpoint
-load_from = None
+load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-s_1xb6-241k_1024x1024-cityscapes/20251105_160949/checkpoints/best_mIoU.pth'
 
 # whether to resume training from the loaded checkpoint
 resume = False

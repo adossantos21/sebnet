@@ -14,19 +14,30 @@ model = dict(
                 thres=0.9,
                 min_kept=131072,
                 class_weight=class_weight,
+                loss_weight=1.0,
+                loss_name='loss_seg'),
+            dict(
+                type='OhemCrossEntropy',
+                thres=0.9,
+                min_kept=131072,
+                class_weight=class_weight,
                 loss_weight=0.4,
                 loss_name='loss_seg_p'),
+            dict(
+                type='BoundaryLoss', 
+                loss_weight=5.0,
+                loss_name='loss_hed'),
+            dict(
+                type='MultiLabelEdgeLoss',
+                loss_weight=5.0,
+                loss_name='loss_sbd'),
             dict(
                 type='OhemCrossEntropy',
                 thres=0.9,
                 min_kept=131072,
                 class_weight=class_weight,
                 loss_weight=1.0,
-                loss_name='loss_seg'),
-            dict(
-                type='BoundaryLoss', 
-                loss_weight=20.0,
-                loss_name='loss_hed'),
+                loss_name='loss_bas')
         ]
     )
 )
@@ -42,6 +53,7 @@ train_pipeline = [
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
     dict(type='GenerateEdge', edge_width=4),
+    dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))

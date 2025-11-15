@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from .basic_block import BasicBlock, Bottleneck, BottleneckExp2
+from .basic_block import BasicBlock, Bottleneck, BottleneckExp2, BottleneckPIDNet
 from .embed import PatchEmbed
 from .encoding import Encoding
 from .inverted_residual import InvertedResidual, InvertedResidualV3
@@ -60,5 +60,5 @@ __all__ = [
     "BEM_EarlierLayers", "MIMIR_EarlierLayers", "EdgeModuleFused_EarlierLayers", 
     "EdgeModuleConditioned_EarlierLayers", "PModuleConditioned_Pag1", 
     "PModuleConditioned_Pag2", "PModuleConditioned_LastLayer", "BaseConv",
-    "PModuleScaled",
+    "PModuleScaled", "BottleneckPIDNet"
 ]

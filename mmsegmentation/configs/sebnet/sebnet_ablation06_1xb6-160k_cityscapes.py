@@ -7,7 +7,7 @@ class_weight = [
 crop_size = (1024, 1024)
 model = dict(
     decode_head=dict(
-        type='Ablation11',
+        type='Ablation06',
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
@@ -17,9 +17,9 @@ model = dict(
                 loss_weight=1.0,
                 loss_name='loss_seg'),
             dict(
-                type='BoundaryLoss', 
-                loss_weight=20.0,
-                loss_name='loss_hed'),
+                type='MultiLabelEdgeLoss',
+                loss_weight=5.0,
+                loss_name='loss_sbd'),
         ]
     )
 )
@@ -34,7 +34,7 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='GenerateEdge', edge_width=4),
+    dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))

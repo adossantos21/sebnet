@@ -83,7 +83,7 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=12, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 
-iters = 6200
+iters = 18600
 val_interval=100
 
 optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0005)
@@ -139,7 +139,7 @@ randomness = dict(seed=304)
 log_level = 'INFO'
 
 # load from which checkpoint
-load_from = None
+load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-s_1xb6-241k_1024x1024-cityscapes/20251105_160949/checkpoints/best_mIoU.pth'
 
 # whether to resume training from the loaded checkpoint
 resume = False

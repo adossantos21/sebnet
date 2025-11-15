@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from torch import Tensor
 from mmseg.models.losses import accuracy
 from mmseg.models.utils import (
-    resize,
-    BaseSegHead,
+    resize, 
+    BaseSegHead, 
     EdgeModuleConditioned as EdgeModule
 )
 from mmseg.registry import MODELS
@@ -16,9 +16,10 @@ from typing import Tuple
 @MODELS.register_module()
 class Ablation06(BaseDecodeHead):
     """
-    Ablation 06 - Baseline + Edge Head, conditioned with a HED supervisory signal.
-    No fusion. See Holistically-Nested Edge Detection (HED) at
-    https://arxiv.org/pdf/1504.06375.pdf for more details.
+    Ablations 06 - Baseline + Edge Head based on PIDNet D 
+    Head, conditioned with a SBD supervisory signal. No fusion.
+    Edge widths {1, 2, 4, 8} and sbd loss weights 
+    {1.0, 5.0, 10.0, 20.0} were explored via grid search
 
     Args:
         in_channels (int): Number of feature maps coming from 
@@ -52,8 +53,8 @@ class Ablation06(BaseDecodeHead):
         self.eval_edges = eval_edges
         if self.training or self.eval_edges:
             self.edge_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
-            self.hed_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
-            self.hed_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+            self.sbd_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.sbd_cls_seg = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
     def forward(self, x: Tuple[Tensor, ...]):
@@ -75,21 +76,20 @@ class Ablation06(BaseDecodeHead):
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            hed = self.hed_head(x_edges, self.hed_cls_seg) # hed: (N, 1, H/8, W/8)
-            output = self.seg_head(x[-1], self.cls_seg) # output: (N, K, H/8, W/8) where K = num_classes
-            return tuple([output, hed])
+            sbd = self.sbd_head(x_edges, self.sbd_cls_seg) # sbd: (N, K, H/8, W/8), where K is the number of classes
+            output = self.seg_head(x[-1], self.cls_seg)
+            return tuple([output, sbd])
         else:
             if self.eval_edges:
                 x_edges = self.edge_module(x)
-                hed = self.hed_head(x_edges, self.hed_cls_seg)
-                output = tuple([hed])
+                sbd = self.sbd_head(x_edges, self.sbd_cls_seg)
+                output = tuple([sbd])
             else:
                 x[-1] = F.interpolate(
                     x[-1],
                     size=x[1].shape[2:],
                     mode='bilinear',
-                    align_corners=self.align_corners
-                )
+                    align_corners=self.align_corners)
                 output = self.seg_head(x[-1], self.cls_seg)
             return output
 
@@ -97,36 +97,36 @@ class Ablation06(BaseDecodeHead):
         gt_semantic_segs = [
             data_sample.gt_sem_seg.data for data_sample in batch_data_samples
         ]
-        gt_edge_segs = [
-            data_sample.gt_edge_map.data for data_sample in batch_data_samples
+        gt_multi_edge_segs = [
+            data_sample.gt_multi_edge_map.data for data_sample in batch_data_samples
         ]
         gt_sem_segs = torch.stack(gt_semantic_segs, dim=0)
-        gt_edge_segs = torch.stack(gt_edge_segs, dim=0)
-        return gt_sem_segs, gt_edge_segs
+        gt_multi_edge_segs = torch.stack(gt_multi_edge_segs, dim=0)
+        return gt_sem_segs, gt_multi_edge_segs
 
     def loss_by_feat(self, logits: Tuple[Tensor],
                      batch_data_samples: SampleList) -> dict:
-        seg_logits, hed_logits = logits
-        seg_label, hed_label = self._stack_batch_gt(batch_data_samples)
+        seg_logits, sbd_logits = logits
+        seg_label, sbd_label = self._stack_batch_gt(batch_data_samples)
         seg_logits = resize(
             input=seg_logits,
             size=seg_label.shape[2:],
             mode='bilinear',
             align_corners=self.align_corners)
-        hed_logits = resize(
-            input=hed_logits,
-            size=hed_label.shape[2:],
+        sbd_logits = resize(
+            input=sbd_logits,
+            size=sbd_label.shape[3:],
             mode='bilinear',
             align_corners=self.align_corners)
         seg_label = seg_label.squeeze(1)
-        hed_label = hed_label.squeeze(1)
+        sbd_label = sbd_label.squeeze(1)
         logits = dict(
             seg_logits=seg_logits,
-            hed_logits=hed_logits,
+            sbd_logits=sbd_logits,
         )
         loss = dict()
-        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
-        loss['loss_hed'] = self.loss_decode[1](hed_logits, hed_label)
+        loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label) # formerly 'loss_ce'
+        loss['loss_sbd'] = self.loss_decode[1](sbd_logits, sbd_label) # formerly 'loss_bd'
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

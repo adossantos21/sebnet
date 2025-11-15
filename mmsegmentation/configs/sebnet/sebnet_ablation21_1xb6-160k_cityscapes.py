@@ -1,4 +1,4 @@
-_base_ = './sebnet_1xb6-240k_cityscapes.py'
+_base_ = './sebnet_1xb6-160k_cityscapes.py'
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
     1.0023, 0.9539, 0.9843, 1.1116, 0.9037, 1.0865, 1.0955, 1.0865, 1.1529,
@@ -7,7 +7,7 @@ class_weight = [
 crop_size = (1024, 1024)
 model = dict(
     decode_head=dict(
-        type='Ablation10',
+        type='Ablation21',
         loss_decode=[
             dict(
                 type='OhemCrossEntropy',
@@ -17,8 +17,12 @@ model = dict(
                 loss_weight=1.0,
                 loss_name='loss_seg'),
             dict(
+                type='BoundaryLoss', 
+                loss_weight=5.0,
+                loss_name='loss_hed'),
+            dict(
                 type='MultiLabelEdgeLoss',
-                loss_weight=20.0,
+                loss_weight=5.0,
                 loss_name='loss_sbd'),
         ]
     )
@@ -34,6 +38,7 @@ train_pipeline = [
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
+    dict(type='GenerateEdge', edge_width=4),
     dict(type='Mask2Edge', labelIds=list(range(0,19)), radius=2), # 0-19 for cityscapes classes
     dict(type='PackSegInputs')
 ]

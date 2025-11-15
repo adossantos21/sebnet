@@ -79,6 +79,8 @@ def parse_args():
     parser.add_argument('config', help='train config file path')
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('work_dir', help='the dir to save logs and models')
+    parser.add_argument('split', default='val', help='whether to use the val or test split')
+    parser.add_argument('--cityscapes', action='store_true', default=False, help='whether cityscapes is the dataset')
     parser.add_argument(
         '--resume',
         action='store_true',
@@ -149,78 +151,53 @@ def main():
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
     cfg.ckpt = args.checkpoint
-    cfg.work_dir = args.work_dir
+    cfg.work_dir = os.path.join(args.work_dir, args.split)
     os.makedirs(cfg.work_dir, exist_ok=True)
     trainid_raw_dir = os.path.join(cfg.work_dir, "trainid_dense_preds")
-    labelid_raw_dir = os.path.join(cfg.work_dir, "labelid_dense_preds")
     trainid_color_dir = os.path.join(cfg.work_dir, "trainid_colorized_preds")
-    labelid_color_dir = os.path.join(cfg.work_dir, "labelid_colorized_preds")
     os.makedirs(trainid_raw_dir, exist_ok=True)
-    os.makedirs(labelid_raw_dir, exist_ok=True)
     os.makedirs(trainid_color_dir, exist_ok=True)
-    os.makedirs(labelid_color_dir, exist_ok=True)
+    if args.cityscapes:
+        labelid_raw_dir = os.path.join(cfg.work_dir, "labelid_dense_preds")
+        labelid_color_dir = os.path.join(cfg.work_dir, "labelid_colorized_preds")
+        os.makedirs(labelid_raw_dir, exist_ok=True)
+        os.makedirs(labelid_color_dir, exist_ok=True)
+    cfg.model.decode_head.eval_edges = False  # Ensure edge mode is off for inference
 
     # Initialize model
     model = init_model(cfg, cfg.ckpt, device='cuda:0')
     model.eval()
 
-    # Build dataset using registry
-    dataset=dict(
-        type=cfg.dataset_type,
-        data_root=cfg.data_root,
-        data_prefix=dict(
-            img_path='leftImg8bit/val', seg_map_path='gtFine/val'),
-        pipeline=cfg.test_pipeline)
-    dataset = DATASETS.build(dataset) # 'CityscapesDataset'
-
-    # Build sampler using registry
-    sampler_cfg = dict(type='DefaultSampler', shuffle=False, dataset=dataset)
-    sampler = DATA_SAMPLERS.build(sampler_cfg)
-
-    # Build dataloader directly with PyTorch's DataLoader
-    dataloader = DataLoader(
-        dataset=dataset,
-        batch_size=6,  # Adjust as needed
-        num_workers=6,
-        persistent_workers=True,
-        sampler=sampler,
-        collate_fn=pseudo_collate  # Added collate_fn to handle SegDataSample objects
-    )
+    # Build test dataset and dataloader (assuming same test config as baseline)
+    dataloader = Runner.build_dataloader(cfg.val_dataloader)
 
     # Create mapping tensor for trainId to labelId
-    mapping_tensor = torch.zeros(256, dtype=torch.long)  # Larger to handle potential unexpected values
-    for t, l in train_to_label.items():
-        mapping_tensor[t] = l
-    mapping_tensor[19:] = 255  # Default to 255 for any unexpected classes
+    if args.cityscapes:
+        mapping_tensor = torch.zeros(256, dtype=torch.long)  # Larger to handle potential unexpected values
+        for t, l in train_to_label.items():
+            mapping_tensor[t] = l
+        mapping_tensor[19:] = 255  # Default to 255 for any unexpected classes
 
     with torch.no_grad():
         for batch in tqdm(dataloader, desc='Generating Dense Predictions'):
             # Preprocess the batch            
             data = model.data_preprocessor(batch, False)
+            batch_img_metas = [sample.metainfo for sample in data['data_samples']]
             
             # Extract height and width of original image
             ori_h, ori_w = data['data_samples'][0].ori_shape
 
             # Extract dense logits
-            dense_logits = model(data['inputs'])
-
-            # Resize logits
-            dense_logits = F.interpolate(
-                dense_logits,
-                [ori_h, ori_w],
-                mode='bilinear',
-                align_corners=True
-            )
+            dense_logits = model.inference(data['inputs'], batch_img_metas)
 
             # Argmax across channel dimension (trainIds: 0-18)
             dense_preds_trainid = torch.argmax(dense_logits, dim=1)
+            dense_preds_trainid_rgb = colorize_trainid(dense_preds_trainid)
 
             # Remap to labelIds
-            dense_preds_labelid = mapping_tensor.to(dense_preds_trainid.device)[dense_preds_trainid]
-
-            # Colorize preds
-            dense_preds_trainid_rgb = colorize_trainid(dense_preds_trainid)
-            dense_preds_labelid_rgb = colorize_labelid(dense_preds_labelid)
+            if args.cityscapes:
+                dense_preds_labelid = mapping_tensor.to(dense_preds_trainid.device)[dense_preds_trainid]
+                dense_preds_labelid_rgb = colorize_labelid(dense_preds_labelid)
             
             # Get batch metadata for filenames
             data_samples = data['data_samples']
@@ -231,28 +208,29 @@ def main():
                 basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
                 raw_img_array = pred.cpu().numpy().astype(np.uint8)
                 img = Image.fromarray(raw_img_array)
-                img.save(os.path.join(trainid_raw_dir, f"{basename}_dense_pred.png"))
+                img.save(os.path.join(trainid_raw_dir, f"{basename}.png"))
             
-            # Save labelId raw preds
-            for pred, name in zip(dense_preds_labelid, batch_names):
-                basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
-                raw_img_array = pred.cpu().numpy().astype(np.uint8)
-                img = Image.fromarray(raw_img_array)
-                img.save(os.path.join(labelid_raw_dir, f"{basename}_dense_pred.png"))
-
             # Save trainId colorized preds
             for pred, name in zip(dense_preds_trainid_rgb, batch_names):
                 basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
                 color_img_array = pred.permute(1, 2, 0).cpu().numpy()
                 img = Image.fromarray(color_img_array)
-                img.save(os.path.join(trainid_color_dir, f"{basename}_dense_pred.png"))
+                img.save(os.path.join(trainid_color_dir, f"{basename}.png"))
+            
+            if args.cityscapes:
+                # Save labelId raw preds
+                for pred, name in zip(dense_preds_labelid, batch_names):
+                    basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
+                    raw_img_array = pred.cpu().numpy().astype(np.uint8)
+                    img = Image.fromarray(raw_img_array)
+                    img.save(os.path.join(labelid_raw_dir, f"{basename}.png"))
 
-            # Save labelId colorized preds
-            for pred, name in zip(dense_preds_labelid_rgb, batch_names):
-                basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
-                color_img_array = pred.permute(1, 2, 0).cpu().numpy()
-                img = Image.fromarray(color_img_array)
-                img.save(os.path.join(labelid_color_dir, f"{basename}_dense_pred.png"))
+                # Save labelId colorized preds
+                for pred, name in zip(dense_preds_labelid_rgb, batch_names):
+                    basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
+                    color_img_array = pred.permute(1, 2, 0).cpu().numpy()
+                    img = Image.fromarray(color_img_array)
+                    img.save(os.path.join(labelid_color_dir, f"{basename}.png"))
 
         print(f"Unique values from last trainId colorized pred: {np.unique(color_img_array)}")
         print(f"Unique values from last trainId raw pred: {np.unique(raw_img_array)}")

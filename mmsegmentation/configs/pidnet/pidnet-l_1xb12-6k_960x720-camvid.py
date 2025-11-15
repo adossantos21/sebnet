@@ -9,7 +9,7 @@ model = dict(
         init_cfg=dict(checkpoint=checkpoint_file)),
     decode_head=dict(in_channels=256, channels=256))
 
-iters = 6200 * 2 # 6200 original
+iters = 18600
 val_interval = 50
 
 param_scheduler = [
@@ -39,3 +39,5 @@ custom_hooks = [
     dict(type='mmpretrain.CustomCheckpointHook', by_epoch=False, interval=-1, 
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
 ]
+
+load_from = '/home/robert.breslin/alessandro/testing/paper_2/mmsegmentation/work_dirs/pidnet-l_1xb6-241k_1024x1024-cityscapes/20251105_161036/checkpoints/best_mIoU.pth'
