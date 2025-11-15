@@ -2,6 +2,11 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
+
+# Changed to 240000 for extended training section of paper.
+iters = 240000 # 160000
+val_interval=1000
+
 imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
 
 class_weight = [
@@ -70,9 +75,6 @@ train_pipeline = [
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
-
-iters = 241000 # 160000
-val_interval=1000
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.

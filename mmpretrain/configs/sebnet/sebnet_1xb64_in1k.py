@@ -1,14 +1,14 @@
 # Pre-training without KoLeo Regularization
 
 _base_ = [
-    '../../_base_/models/sebnet_alt.py',
-    '../../_base_/datasets/imagenet_bs32.py',
-    '../../_base_/default_runtime.py'
+    '../_base_/models/sebnet.py',
+    '../_base_/default_runtime.py'
 ]
 
 dataset_type = 'ImageNet'
 # preprocessing configuration
 data_preprocessor = dict(
+    num_classes=1000,
     # Input image data channels in 'RGB' order
     mean=[123.675, 116.28, 103.53],    # Input image normalized channel mean in RGB order
     std=[58.395, 57.12, 57.375],       # Input image normalized channel std in RGB order
@@ -31,9 +31,10 @@ test_pipeline = [
 
 # Use your own dataset directory
 train_dataloader = dict(
-    batch_size=32,
+    batch_size=64,
     num_workers=5,
     dataset=dict(
+        type=dataset_type,
         data_root='data/imagenet',
         ann_file='meta/train.txt',
         data_prefix='train',
@@ -42,7 +43,7 @@ train_dataloader = dict(
     persistent_workers=True,
 )
 val_dataloader = dict(
-    batch_size=32,               
+    batch_size=64,               
     num_workers=5,
     dataset=dict(
         type=dataset_type,
@@ -60,10 +61,7 @@ val_evaluator = dict(type='Accuracy', topk=(1, 5))
 test_evaluator = val_evaluator    # The settings of the evaluation metrics for test, which is the same
 
 optim_wrapper = dict(
-    # Use SGD optimizer to optimize parameters.
-    type='GradTrackingOptimWrapper',
     optimizer=dict(type='SGD', lr=0.1, momentum=0.9, weight_decay=0.0001))
-
 # The tuning strategy of the learning rate.
 # The 'MultiStepLR' means to use multiple steps policy to schedule the learning rate (LR).
 param_scheduler = dict(
@@ -71,16 +69,16 @@ param_scheduler = dict(
 
 # Training configuration, iterate 100 epochs, and perform validation after every training epoch.
 # 'by_epoch=True' means to use `EpochBaseTrainLoop`, 'by_epoch=False' means to use IterBaseTrainLoop.
-train_cfg = dict(type='GradientTrackingTrainLoop', max_epochs=100, val_interval=1)
+train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=100, val_interval=1)
 # Use the default val loop settings.
 val_cfg = dict()
 # Use the default test loop settings.
 test_cfg = dict()
 
-# This schedule is for the total batch size 256.
+# This schedule is for the total batch size 64.
 # If you use a different total batch size, like 512 and enable auto learning rate scaling.
 # We will scale up the learning rate to 2 times.
-auto_scale_lr = dict(base_batch_size=256)
+auto_scale_lr = dict(base_batch_size=64)
 
 # defaults to use registries in mmpretrain
 default_scope = 'mmpretrain'
@@ -107,7 +105,6 @@ default_hooks = dict(
 )
 
 custom_hooks = [
-    dict(type='GradFlowVisualizationHook', interval=20000, initial_grads=True, show_plot=False, priority='HIGHEST'),
     dict(type='CustomCheckpointHook', interval=1, save_begin=74, priority='VERY_LOW')
 ]
 

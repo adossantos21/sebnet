@@ -2,7 +2,7 @@ _base_ = [
     '../_base_/datasets/cityscapes_testset_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
-imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
+imagenet_checkpoint_file = "path/to/pretrained/checkpoint.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,

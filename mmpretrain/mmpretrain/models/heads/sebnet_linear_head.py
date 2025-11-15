@@ -18,4 +18,4 @@ class SEBNetLinearHead(LinearClsHead):
         """
         # The LinearClsHead doesn't have other module, just return after
         # unpacking.
-        return feats
+        return feats[-1]

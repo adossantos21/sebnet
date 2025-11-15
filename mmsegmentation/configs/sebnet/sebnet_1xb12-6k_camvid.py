@@ -2,13 +2,13 @@ _base_ = [
     '../_base_/datasets/camvid.py',
     '../_base_/default_runtime.py'
 ]
-imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
+imagenet_checkpoint_file = "path/to/pretrained/checkpoint.pth"
 
 class_weight = [
     1.1171, 0.8749, 0.9845, 1.0579, 1.0247, 1.0960, 0.8641, 0.9382, 1.2307,
     0.8955, 0.9165
 ]
-data_root = "/home/robert.breslin/datasets/CamVid"
+data_root = "custom/path/to/root/CamVid"
 
 # preprocessing configuration
 crop_size = (960, 720)

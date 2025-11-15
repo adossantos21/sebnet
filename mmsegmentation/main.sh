@@ -1,3 +1,3 @@
 export CUDA_VISIBLE_DEVICES=0
 
-python tools/train.py configs/pidnet/pidnet-s_1xb24-87k_512x512-bdd100k.py
+python tools/train.py configs/sebnet/sebnet_ablation02_1xb6-160k_cityscapes.py
