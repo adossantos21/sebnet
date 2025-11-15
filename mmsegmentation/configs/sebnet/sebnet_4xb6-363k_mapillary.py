@@ -108,13 +108,13 @@ train_pipeline = [
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 
-iters = 363000 # 2 gpus
+iters = 363000 # 4 gpus
 val_interval=1000
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.
     type='mmpretrain.GradTrackingOptimWrapper',
-    optimizer=dict(type='SGD', lr=0.01, momentum=0.9, 
+    optimizer=dict(type='SGD', lr=0.02, momentum=0.9, 
                    weight_decay=0.0005), clip_grad=None)
 
 # The tuning strategy of the learning rate.

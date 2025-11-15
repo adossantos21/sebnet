@@ -1,6 +1,10 @@
+mmsegmentation/figs/*
+mmsegmentation/misc/*
+misc/*
 preds/*
 mmpretrain/z_test_work_dir/*
 *.json
+mmsegmentation/preds/*
 
 mmsegmentation/copy_ckpts.sh
 mmsegmentation/SBD/*
