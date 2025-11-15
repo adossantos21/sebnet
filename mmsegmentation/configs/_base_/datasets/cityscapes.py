@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'CityscapesDataset'
-data_root = '/home/robert.breslin/datasets/cityscapes'
+data_root = 'data/cityscapes'
 crop_size = (512, 1024)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -49,7 +49,7 @@ train_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(
             img_path='leftImg8bit/train', seg_map_path='gtFine/train'),
-        ann_file='/home/robert.breslin/datasets/cityscapes/train.txt',
+        ann_file='data/cityscapes/train.txt',
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
@@ -61,7 +61,7 @@ val_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(
             img_path='leftImg8bit/val', seg_map_path='gtFine/val'),
-        ann_file='/home/robert.breslin/datasets/cityscapes/val.txt',
+        ann_file='data/cityscapes/val.txt',
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
