@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import torch
 import torch.nn as nn
@@ -83,6 +83,7 @@ class PIDHead(BaseDecodeHead):
                  num_classes: int,
                  norm_cfg: OptConfigType = dict(type='BN'),
                  act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(
             in_channels,
@@ -91,6 +92,7 @@ class PIDHead(BaseDecodeHead):
             norm_cfg=norm_cfg,
             act_cfg=act_cfg,
             **kwargs)
+        self.eval_edges = eval_edges
         self.i_head = BasePIDHead(in_channels, channels, norm_cfg, act_cfg)
         self.p_head = BasePIDHead(in_channels // 2, channels, norm_cfg,
                                   act_cfg)
@@ -135,7 +137,12 @@ class PIDHead(BaseDecodeHead):
             x_d = self.d_head(x_d, self.d_cls_seg)
             return x_p, x_i, x_d
         else:
-            return self.i_head(inputs, self.cls_seg)
+            if self.eval_edges:
+                hed = self.d_head(inputs, self.d_cls_seg)
+                output = tuple([hed])
+            else:
+                output = self.i_head(inputs, self.cls_seg)
+            return output
 
     def _stack_batch_gt(self, batch_data_samples: SampleList) -> Tuple[Tensor]:
         gt_semantic_segs = [
@@ -181,3 +188,40 @@ class PIDHead(BaseDecodeHead):
         loss['acc_seg'] = accuracy(
             i_logit, sem_label, ignore_index=self.ignore_index)
         return loss
+
+    def predict_by_feat(self, seg_logits: Tensor,
+                        batch_img_metas: List[dict]) -> Tensor:
+        """Transform a batch of output seg_logits to the input shape.
+
+        Args:
+            seg_logits (Tensor): The output from decode head forward function.
+            batch_img_metas (list[dict]): Meta information of each image, e.g.,
+                image size, scaling factor, etc.
+
+        Returns:
+            Tensor: Outputs segmentation logits map.
+        """
+
+        if isinstance(batch_img_metas[0]['img_shape'], torch.Size):
+            # slide inference
+            size = batch_img_metas[0]['img_shape']
+        elif 'pad_shape' in batch_img_metas[0]:
+            size = batch_img_metas[0]['pad_shape'][:2]
+        else:
+            size = batch_img_metas[0]['img_shape']
+
+        if self.eval_edges:
+            hed_logits = seg_logits[0]
+            hed_logits = resize(
+                input=hed_logits,
+                size=size,
+                mode='bilinear',
+                align_corners=self.align_corners)
+            return hed_logits
+        else:
+            seg_logits = resize(
+                input=seg_logits,
+                size=size,
+                mode='bilinear',
+                align_corners=self.align_corners)
+            return seg_logits 

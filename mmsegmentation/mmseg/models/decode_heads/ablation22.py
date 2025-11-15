@@ -16,8 +16,9 @@ from typing import Tuple
 @MODELS.register_module()
 class Ablation22(BaseDecodeHead):
     """
-    Ablation 22 - Baseline + Edge Head, conditioned with HED and SBD 
-    Signals. No fusion. See Holistically-Nested Edge Detection (HED) 
+    Ablation 22 - Baseline + Edge Head (HED) + Edge Head (SBD), 
+    conditioned with BAS, HED and SBD Signals. No fusion. See 
+    Holistically-Nested Edge Detection (HED) 
     at https://arxiv.org/pdf/1504.06375.pdf and Semantic Boundary 
     Detection (SBD) at https://arxiv.org/pdf/1705.09759 for more 
     details. 
@@ -53,9 +54,10 @@ class Ablation22(BaseDecodeHead):
         assert isinstance(stride, int), f"Expected stride to be int, got {type(stride)}"
         self.eval_edges = eval_edges
         if self.training or self.eval_edges:
-            self.edge_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
+            self.hed_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
             self.hed_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.hed_cls_seg = nn.Conv2d(in_channels // 4, 1, kernel_size=1)
+            self.sbd_module = EdgeModule(channels=in_channels // 4, num_stem_blocks=num_stem_blocks, eval_edges=self.eval_edges)
             self.sbd_head = BaseSegHead(in_channels // 2, in_channels // 4, stride=stride, norm_cfg=norm_cfg)
             self.sbd_cls_seg = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1)
         self.seg_head = BaseSegHead(in_channels, in_channels, stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
@@ -73,14 +75,15 @@ class Ablation22(BaseDecodeHead):
         x_out has shape (N, 256, H/64, W/64)
         """
         if self.training:
-            x_edges = self.edge_module(x) # x_edges: (N, 128, H/8, W/8)
+            x_hed = self.hed_module(x) # x_hed: (N, 128, H/8, W/8)
+            x_sbd = self.sbd_module(x) # x_sbd: (N, 128, H/8, W/8)
             x[-1] = F.interpolate(
                 x[-1],
                 size=x[1].shape[2:],
                 mode='bilinear',
                 align_corners=self.align_corners)
-            hed = self.hed_head(x_edges, self.hed_cls_seg) # (N, 1, H/8, W/8)
-            sbd = self.sbd_head(x_edges, self.sbd_cls_seg) # (N, K, H/8, W/8)
+            hed = self.hed_head(x_hed, self.hed_cls_seg) # (N, 1, H/8, W/8)
+            sbd = self.sbd_head(x_sbd, self.sbd_cls_seg) # (N, K, H/8, W/8)
             output = self.seg_head(x[-1], self.cls_seg) # (N, K, H/8, W/8)
             return tuple([output, hed, sbd])
         else:
@@ -144,6 +147,12 @@ class Ablation22(BaseDecodeHead):
         loss['loss_seg'] = self.loss_decode[0](seg_logits, seg_label)
         loss['loss_hed'] = self.loss_decode[1](hed_logits, hed_label)
         loss['loss_sbd'] = self.loss_decode[2](sbd_logits, sbd_label)
+        filler = torch.ones_like(seg_label) * self.ignore_index
+        seg_hed_label = torch.where(
+            torch.sigmoid(hed_logits[:, 0, :, :]) > 0.8, seg_label, filler)
+        #seg_sbd_label = torch.where(
+        #    torch.sigmoid(torch.max(sbd_logits, dim=1)[0]) > 0.8, seg_label, filler)
+        loss['loss_bas'] = self.loss_decode[3](seg_logits, seg_hed_label)
         loss['acc_seg'] = accuracy(
             seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss, logits

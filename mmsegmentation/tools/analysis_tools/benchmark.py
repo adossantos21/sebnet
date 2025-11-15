@@ -108,6 +108,16 @@ def main():
                 benchmark_dict[f'overall_fps_{time_index + 1}'] = round(fps, 2)
                 overall_fps_list.append(fps)
                 break
+
+        # If dataset exhausted before total_iters, calculate FPS from available iterations
+        else:
+            if i >= num_warmup:
+                iter_used = i + 1 - num_warmup
+                fps = iter_used / pure_inf_time
+                print(f'Dataset exhausted after {i + 1} images, '
+                    f'overall fps: {fps:.2f} img / s\n')
+                benchmark_dict[f'overall_fps_{time_index + 1}'] = round(fps, 2)
+                overall_fps_list.append(fps)
     benchmark_dict['average_fps'] = round(np.mean(overall_fps_list), 2)
     benchmark_dict['fps_variance'] = round(np.var(overall_fps_list), 4)
     print(f'Average fps of {repeat_times} evaluations: '

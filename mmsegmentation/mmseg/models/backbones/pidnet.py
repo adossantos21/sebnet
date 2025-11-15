@@ -12,7 +12,7 @@ from torch import Tensor
 from mmseg.registry import MODELS
 from mmseg.utils import OptConfigType
 from ..utils import DAPPM, PAPPM, BasicBlock
-from ..utils import BottleneckExp2 as Bottleneck
+from ..utils import BottleneckPIDNet as Bottleneck
 
 
 class PagFM(BaseModule):
@@ -234,14 +234,15 @@ class PIDNet(BaseModule):
                  num_branch_blocks: int = 3,
                  align_corners: bool = False,
                  norm_cfg: OptConfigType = dict(type='BN'),
-                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=False),
                  init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
                  **kwargs):
         super().__init__(init_cfg)
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.align_corners = align_corners
-
+        self.eval_edges = eval_edges
         # stem layer
         self.stem = self._make_stem_layer(in_channels, channels,
                                           num_stem_blocks)
@@ -470,11 +471,11 @@ class PIDNet(BaseModule):
             Tensor or tuple[Tensor]: If self.training is True, return
                 tuple[Tensor], else return Tensor.
         """
-        w_out = x.shape[-1] // 8
-        h_out = x.shape[-2] // 8
 
         # stage 0-2
         x = self.stem(x)
+        w_out = x.shape[-1]
+        h_out = x.shape[-2]
 
         # stage 3
         x_i = self.relu(self.i_branch_layers[0](x))
@@ -505,7 +506,7 @@ class PIDNet(BaseModule):
             size=[h_out, w_out],
             mode='bilinear',
             align_corners=self.align_corners)
-        if self.training:
+        if self.training or self.eval_edges:
             temp_d = x_d.clone()
 
         # stage 5
@@ -520,4 +521,11 @@ class PIDNet(BaseModule):
             mode='bilinear',
             align_corners=self.align_corners)
         out = self.dfm(x_p, x_i, x_d)
-        return (temp_p, out, temp_d) if self.training else out
+        if self.training:
+            output = (temp_p, out, temp_d)
+        else:
+            if self.eval_edges:
+                output = temp_d
+            else:
+                output = out
+        return output

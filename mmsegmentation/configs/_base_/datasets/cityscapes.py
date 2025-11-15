@@ -49,6 +49,7 @@ train_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(
             img_path='leftImg8bit/train', seg_map_path='gtFine/train'),
+        ann_file='/home/robert.breslin/datasets/cityscapes/train.txt',
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
@@ -60,6 +61,7 @@ val_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(
             img_path='leftImg8bit/val', seg_map_path='gtFine/val'),
+        ann_file='/home/robert.breslin/datasets/cityscapes/val.txt',
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
 

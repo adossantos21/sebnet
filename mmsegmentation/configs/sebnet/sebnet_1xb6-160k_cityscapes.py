@@ -2,7 +2,12 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py'
 ]
-checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
+
+# Changed to 240000 for extended training section of paper.
+iters = 240000 # 160000
+val_interval=1000
+
+imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
 
 class_weight = [
     0.8373, 0.918, 0.866, 1.0345, 1.0166, 0.9969, 0.9754, 1.0489, 0.8786,
@@ -32,7 +37,7 @@ model = dict(
         num_stem_blocks = num_stem_blocks,
         num_branch_blocks = 4,
         align_corners = False,
-        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file)),
+        init_cfg=dict(type='Pretrained', checkpoint=imagenet_checkpoint_file)),
     neck=dict(
         type='DAPPM', # The type of the neck module.
         in_channels=1024, 
@@ -70,9 +75,6 @@ train_pipeline = [
     dict(type='PackSegInputs')
 ]
 train_dataloader = dict(batch_size=6, dataset=dict(pipeline=train_pipeline))
-
-iters = 160000
-val_interval=1000
 
 optim_wrapper = dict(
     # Use SGD optimizer to optimize parameters.

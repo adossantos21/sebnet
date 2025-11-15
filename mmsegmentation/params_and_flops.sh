@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=0
 python tools/analysis_tools/get_flops.py \
-    configs/sebnet/test_sebnextalt_staged_4xb32_in1k.py \
+    configs/pidnet/pidnet-l_1xb6-241k_1024x1024-cityscapes.py \
     --shape 2048 1024

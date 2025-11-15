@@ -39,6 +39,7 @@ from .resnet_cifar import ResNet_CIFAR
 from .resnext import ResNeXt
 from .revvit import RevVisionTransformer
 from .riformer import RIFormer
+from .sebnet_staged import SEBNet_Staged
 from .sebnet_original import SEBNetOriginal
 from .sebnet_test1 import SEBNetTest1
 from .sebnet_test2 import SEBNetTest2
@@ -83,6 +84,7 @@ __all__ = [
     'ResNetV1d',
     'ResNeSt',
     'ResNet_CIFAR',
+    'SEBNet_Staged',
     'SEBNetOriginal',
     'SEBNetTest1',
     'SEBNetTest2',

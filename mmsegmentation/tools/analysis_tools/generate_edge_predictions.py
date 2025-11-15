@@ -81,6 +81,7 @@ def main():
         cfg.merge_from_dict(args.cfg_options)
     cfg.ckpt = args.checkpoint
     cfg.work_dir = args.work_dir
+    cfg.model.backbone.eval_edges = True
     cfg.model.decode_head.eval_edges = True  # Ensure edge mode for inference
     os.makedirs(cfg.work_dir, exist_ok=True)
 
@@ -115,15 +116,19 @@ def main():
         for batch in tqdm(dataloader, desc='Generating Edge Predictions'):
             # Preprocess batch
             data = model.data_preprocessor(batch, False)
+            batch_img_metas = [sample.metainfo for sample in data['data_samples']]
             
             # Extract height and width of original image
             ori_h, ori_w = data['data_samples'][0].ori_shape
 
             # Extract features (backbone + neck)
-            feats = model.extract_feat(data['inputs'])
+            #feats = model.extract_feat(data['inputs'])
             
             # Get edge logits from decode head forward (assumes eval_edges=True)
-            logits_tuple = model.decode_head.forward(feats)  # Shape: (N, C, H, W)
+            #logits_tuple = model.decode_head.forward(feats)  # Shape: (N, C, H, W)
+            logits_tuple = model.inference(data['inputs'], batch_img_metas)
+            if isinstance(logits_tuple, torch.Tensor):
+                logits_tuple = tuple([logits_tuple])
 
             for logits_idx, logits in enumerate(logits_tuple):
 
@@ -161,7 +166,7 @@ def main():
                             basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
                             
                             # Scale and save as uint16 grayscale
-                            scaled_pred = (pred_cls * 65535).astype(np.uint16)
+                            scaled_pred = (pred_cls * 65535).cpu().numpy().astype(np.uint16)
                             img = Image.fromarray(scaled_pred, mode='I;16')
                             img.save(os.path.join(out_dir, f"{basename}_SBD.png"))
                     elif ndim == 3:
@@ -172,7 +177,7 @@ def main():
                         basename = name.split('_leftImg8bit')[0] if '_leftImg8bit' in name else name.split('.')[0]
                         
                         # Scale and save as uint16 grayscale
-                        scaled_pred = (pred * 65535).astype(np.uint16)
+                        scaled_pred = (pred * 65535).cpu().numpy().astype(np.uint16)
                         img = Image.fromarray(scaled_pred, mode='I;16')
                         img.save(os.path.join(out_dir, f"{basename}_SBD.png"))
 
