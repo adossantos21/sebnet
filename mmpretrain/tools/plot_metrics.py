@@ -59,27 +59,7 @@ def plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path):
     plt.title('Validation Accuracy and Training Learning Rate vs Epoch')
     plt.savefig(out_path)
 
-log_file_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170401/20250721_170401.log'
-out_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170401/log_plot.png'
-epochs, top1, top5, lrs = parse_log_file(log_file_path)
-plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path)
-
-log_file_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170430/20250721_170430.log'
-out_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170430/log_plot.png'
-epochs, top1, top5, lrs = parse_log_file(log_file_path)
-plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path)
-
-log_file_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170610/20250721_170610.log'
-out_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170610/log_plot.png'
-epochs, top1, top5, lrs = parse_log_file(log_file_path)
-plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path)
-
-log_file_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170637/20250721_170637.log'
-out_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170637/log_plot.png'
-epochs, top1, top5, lrs = parse_log_file(log_file_path)
-plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path)
-
-log_file_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170837/20250721_170837.log'
-out_path = '/home/robert.breslin/alessandro/paper_2/mmpretrain/work_dirs/pretrain01_staged_lr_adamw_1xb64_in1k/20250721_170837/log_plot.png'
+log_file_path = 'path/to/log.log'
+out_path = 'output/path/log_plot.png'
 epochs, top1, top5, lrs = parse_log_file(log_file_path)
 plot_accuracies_and_lr(epochs, top1, top5, lrs, out_path)
