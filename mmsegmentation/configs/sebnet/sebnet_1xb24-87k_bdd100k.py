@@ -2,8 +2,8 @@ _base_ = [
     '../_base_/datasets/bdd100k.py',
     '../_base_/default_runtime.py'
 ]
-imagenet_checkpoint_file = "/home/robert.breslin/alessandro/paper_2/mmpretrain/checkpoints/epoch_98.pth"
-data_root = "/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg"
+imagenet_checkpoint_file = "imagenet/checkpoint.pth"
+data_root = "data/bdd100k_seg/bdd100k/seg"
 
 class_weight = [
     0.8238, 0.9277, 0.8431, 1.0055, 0.9627, 0.9685, 1.0660, 1.0259, 0.8433,
@@ -75,8 +75,8 @@ train_dataloader = dict(
     dataset=dict(
         data_root=data_root, 
         data_prefix=dict(
-            img_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/images/train',
-            seg_map_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/train'
+            img_path='data/bdd100k_seg/bdd100k/seg/images/train',
+            seg_map_path='data/bdd100k_seg/bdd100k/seg/labels/train'
         ),
     pipeline=train_pipeline
     )
@@ -107,8 +107,8 @@ val_dataloader = dict(
     dataset=dict(
         data_root=data_root,
         data_prefix=dict(
-            img_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/images/val',
-            seg_map_path='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/val'
+            img_path='data/bdd100k_seg/bdd100k/seg/images/val',
+            seg_map_path='data/bdd100k_seg/bdd100k/seg/labels/val'
         )
     )
 )
@@ -141,7 +141,7 @@ custom_hooks = [
          save_best=['mAcc', 'mIoU'], rule='greater', save_last=False, priority='VERY_LOW'),
     dict(
         type='FeatureMapVisualizationHook',
-        img_name='/home/robert.breslin/datasets/bdd100k_seg/bdd100k/seg/labels/train/0a0eaeaf-9ad0c6dd_train_id.png',
+        img_name='data/bdd100k_seg/bdd100k/seg/labels/train/0a0eaeaf-9ad0c6dd_train_id.png',
         rstrip='_leftImg8bit',
         out_dir=None,
         priority='HIGHEST'
