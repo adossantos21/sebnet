@@ -22,8 +22,8 @@ Download weights from the table below and follow [evaluate.md](docs/evaluate.md)
 
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
-   | Ablation 20                     | [81.6](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [80.9](https://github.com/adossantos21/paper_2) |  60.5 |
-   | Ablation 12                     | [81.0](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  69.1 |
+   | Ablation 20                     | [81.6](https://github.com/adossantos21/sebnet/blob/main/mmsegmentation/checkpoints/ablation20/val/best_mIoU.pth) | [80.9](https://github.com/adossantos21/sebnet/blob/main/mmsegmentation/checkpoints/ablation20/test/best_mIoU.pth) |  60.5 |
+   | Ablation 12                     | [81.0](https://github.com/adossantos21/sebnet/blob/main/mmsegmentation/checkpoints/ablation12/val/best_mIoU.pth) | [Pending](https://github.com/adossantos21/sebnet/blob/main/mmsegmentation/checkpoints/ablation12/test/best_mIoU.pth) |  69.1 |
 
 ## Reproducing Experiments / Training your own models
 
