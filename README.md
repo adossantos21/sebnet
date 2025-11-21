@@ -22,9 +22,8 @@ Download weights from the table below and follow [evaluate.md](docs/evaluate.md)
 
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
-   | Ablation 40                     | [81.1](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  31.1 |
-   | Ablation 33                     | [80.7](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  35.4 |
-   | Ablation 31                     | [80.5](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/checkpoints/sebnet_baseline-p-d-bas-head_1xb6_cityscapes/20250906_105242/best_mIoU.pth)                              | [Pending](https://github.com/adossantos21/paper_2)                         |  31.1 |
+   | Ablation 20                     | [81.6](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/checkpoints/sebnet_baseline-p-d-sbd-bas-head_1xb6_cityscapes/20250906_102604/best_mIoU.pth) | [80.9](https://github.com/adossantos21/paper_2) |  60.5 |
+   | Ablation 12                     | [81.0](https://github.com/adossantos21/paper_2/raw/main/mmsegmentation/work_dirs/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/checkpoints/sebnet_baseline-p-sbd-bas-head-conditioned_1xb6_cityscapes/20250906_102650/best_mIoU.pth) | [Pending](https://github.com/adossantos21/paper_2) |  69.1 |
 
 ## Reproducing Experiments / Training your own models
 
@@ -38,7 +37,7 @@ Nomenclature:
 - Semantic Boundary Detection [(SBD)](https://arxiv.org/pdf/1705.09759)
 - Boundary Awareness [(BAS)](https://arxiv.org/pdf/2206.02066)
 
-The development of SEBNet was sequential and comprehensive. There are two stages.
+The development of SEBNet was sequential and comprehensive. There are two stages. You will find the tables below correspond to the config files used to reproduce results.
 
 ### Stage 1 - Pre-training
 
@@ -48,86 +47,64 @@ To begin, a vanilla CNN backbone is adapted from the integral (I) branch of PIDN
 
 ### Stage 2 - Finetuning
 
-Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 40 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone. An asterisk indicates the ablation study is complete.
-#### <ins>Section 01 - Train Baseline</ins>
+Next, a decoder is attached for the downstream semantic segmentation task. A baseline is established prior to 19 ablation studies that examine the effects of different heads. These heads either directly contribute to the dense prediction yielded by SEBNet, or they condition the backbone.
 
-1.  **Ablation 01*** - A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head.
+#### <ins>Section 01 - Establish baseline and test detailed head</ins>
 
-#### <ins>Section 02 - Find best P Head</ins>
+A baseline is established by attaching a pyramid pooling module (DAPPM or PAPPM) and a vanilla segmentation head. Following baseline evaluation, we attach an auxiliary head that preserves detailed features. The auxiliary head is taken from PIDNet's P Branch.
 
-Assume best P Head following this section.
+| Ablation | Backbone | Detailed Head | mIoU |
+|----------|----------|---------------|------|
+| Ablation 01 | SEBNet | N/A | 72.7 |
+| Ablation 02 | SEBNet | PIDNet P Branch | 79.0 |
 
-2.  **Ablation 02*** - Baseline + P Head (from PIDNet's P Branch)
-3.  **Ablation 03** - Baseline + P Head (Pag1 supervised, conditioning only)
-4.  **Ablation 04** - Baseline + P Head (Pag2 supervised, conditioning only)
-5.  **Ablation 05** - Baseline + P Head (Last layer supervised, conditioning only)
+#### <ins>Section 02 - Identify best edge-based architecture</ins>
 
-#### <ins>Section 03 - Find best Edge Head</ins>
+Similar to the detailed head testing, edge heads and corresponding signals are attached to the baseline architecture to determine the best edge-based architecture. For example, CASENet is the edge head, while SBD is the learning signal.
 
-Following this section, "Edge Head" will be the best edge architecture determined during these ablation studies. Note that any given head can have multiple loss signals, e.g., HED loss signal, SBD loss signal, BAS loss signal, OHEM (variant of Cross Entropy) loss signal, etc.
+| Ablation | Backbone | Edge Head | mIoU | mF (ODS) |
+|----------|----------|-----------|------|----------|
+| Ablation 01 | SEBNet | N/A | 72.7 | - |
+| Ablation 03 | SEBNet | CASENet, SBD | 71.0 | 60.0 (SBD) |
+| Ablation 04 | SEBNet | DFF, SBD | 72.5 | 63.5 (SBD) |
+| Ablation 05 | SEBNet | PIDNet D Branch, HED | 73.2 | 81.7 (HED) |
+| Ablation 06 | SEBNet | PIDNet D Branch, SBD | **74.8** | **67.6 (SBD)** |
+| Ablation 07 | SEBNet | PIDNet D Branch, HED, SBD | 74.7 | **82.4 (HED)**<br>67.3 (SBD) |
 
-6.  **Ablation 06*** - Baseline + Edge Head (from PIDNet's D Branch), HED Signal, Edge Width 2, BD Loss Weight 5.0
-7.  **Ablation 07*** - Baseline + CASENet Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-8.  **Ablation 08*** - Baseline + DFF Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-9.  **Ablation 09*** - Baseline + BEM Head, SBD Signal Edge Width 2, SBD Loss Weight 5.0
-10. **Ablation 10*** - Baseline + Edge Head (from PIDNet's D Branch), SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-11. **Ablation 11*** - Baseline + Edge Earlier Layers Head (from PIDNet's D Branch), HED Signal, Edge Width 2, BD Loss Weight 5.0
-12. **Ablation 12*** - Baseline + CASENet Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-13. **Ablation 13*** - Baseline + DFF Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-14. **Ablation 14*** - Baseline + BEM Earlier Layers Head, SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-15. **Ablation 15*** - Baseline + Edge Earlier Layers Head (from PIDNet's D Branch), SBD Signal, Edge Width 2, SBD Loss Weight 5.0
-16. **Ablation 16*** - Baseline + Best Edge Head, SBD Signal, Edge Width 1, SBD Loss Weight 5.0
-17. **Ablation 17*** - Baseline + Best Edge Head, SBD Signal, Edge Width 4, SBD Loss Weight 5.0
-18. **Ablation 18*** - Baseline + Best Edge Head, SBD Signal, Edge Width 8, SBD Loss Weight 5.0
-19. **Ablation 19*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 1.0
-20. **Ablation 20*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 10.0
-21. **Ablation 21*** - Baseline + Best Edge Head, SBD Signal, Best Edge Width, SBD Loss Weight 20.0
+#### <ins>Section 03 - Find the best configuration</ins>
 
-#### <ins>Section 04 - Condition vs Fusion Grid Search, 1 Edge Head with 1-2 signals (HED and/or SBD)</ins>
+We select the PIDNet D Branch as our best edge-based architecture and perform more ablation studies to determine the best overall model. Two approaches are taken. The first uses conditioning to learn edge features while simultaneously reducing latency overhead. The second fuses edge features, introducing latency overhead.
 
-***Conditioning*** involves attaching an auxiliary head and corresponding signal to your baseline architecture during training. While the model trains, learned features from the auxiliary head backwards propagate into the backbone of your baseline, creating a shared representation. During evaluation, the shared representation preserved in the backbone allows us to detach the auxiliary head, preventing latency overhead. "(Conditioned)" will indicate that the corresponding head was only used to backwards propagate learned features into the backbone. *All edge heads in the prior section were tested via conditioning*.
+A dash for the PAG column indicates no detailed head and corresponding signal were attached to the backbone.
 
-***Fusion*** also involves attaching an auxiliary head and corresponding signal to your baseline architecture during training. The main difference being that the deepest features of the auxiliary head are used in a feature fusion module (FFM) to create the shared representation. During evaluation, the auxiliary head is not detached, introducing latency overhead. "(Fused)" will indicate that the corresponding head's deepest features were fused with the output of the backbone via a FFM.
+| Ablation | Conditioning | Fusion | PAG | HED | SBD | BAS | mIoU | mF (ODS) | FPS |
+|----------|:------------:|:------:|:---:|:---:|:---:|:---:|:----:|:---------|:---:|
+| Ablation 07 | ✓ | - | - | ✓ | ✓ | - | 74.7 | 82.4 (HED)<br>67.3 (SBD) | **96.8** |
+| Ablation 08 | ✓ | - | - | ✓ | ✓ | ✓ | 75.0 | 82.4 (HED)<br>67.8 (SBD) | 95.8 |
+| Ablation 09 | ✓ | - | ✓ | ✓ | - | - | 79.6 | **82.6** (HED) | 68.7 |
+| Ablation 10 | ✓ | - | ✓ | ✓ | - | ✓ | 80.0 | **82.6** (HED) | 68.9 |
+| Ablation 11 | ✓ | - | ✓ | - | ✓ | - | 79.6 | 67.9 (SBD) | 68.6 |
+| Ablation 12 | ✓ | - | ✓ | - | ✓ | ✓ | **80.4** | 67.7 (SBD) | 68.9 |
+| Ablation 13 | ✓ | - | ✓ | ✓ | ✓ | - | 80.1 | 82.2 (HED)<br>**68.4** (SBD) | 69.0 |
+| Ablation 14 | ✓ | - | ✓ | ✓ | ✓ | ✓ | 80.2 | 82.3 (HED)<br>67.8 (SBD) | 68.6 |
+| Ablation 15 | - | ✓ | ✓ | ✓ | - | - | 79.6 | 82.3 (HED) | 60.2 |
+| Ablation 16 | - | ✓ | ✓ | ✓ | - | ✓ | 80.0 | 82.4 (HED) | 60.3 |
+| Ablation 17 | - | ✓ | ✓ | - | ✓ | - | 79.8 | 67.9 (SBD) | 60.2 |
+| Ablation 18 | - | ✓ | ✓ | - | ✓ | ✓ | 80.1 | 68.3 (SBD) | 60.3 |
+| Ablation 19 | - | ✓ | ✓ | ✓ | ✓ | - | 79.8 | **82.6** (HED)<br>68.1 (SBD) | 60.4 |
+| Ablation 20 | - | ✓ | ✓ | ✓ | ✓ | ✓ | 80.3 | 82.5 (HED)<br>67.9 (SBD) | 60.5 |
 
-22. **Ablation 22*** - Baseline + Edge Head, HED and SBD Signals for Edge Head
-23. **Ablation 23** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
-24. **Ablation 24** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
-25. **Ablation 25*** - Baseline + P Head (Fused) + Edge Head (Fused), HED Signal, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
-26. **Ablation 26** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), SBD Signal
-27. **Ablation 27*** - Baseline + P Head (Fused) + Edge Head (Conditioned), SBD Signal
-28. **Ablation 28*** - Baseline + P Head (Fused) + Edge Head (Fused), SBD Signal
-29. **Ablation 29** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED and BAS Signals, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
-30. **Ablation 30** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED and BAS Signals, *Appendix ablation, since SBD Signal proved to be more effective than HED Signal by itself in Section 03*
-31. **Ablation 31*** - Baseline + P Head (Fused) + D Head (Fused), HED and BAS Signals (PIDNet equivalent), *Needed for study comparison*
-32. **Ablation 32** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), SBD and BAS Signals
-33. **Ablation 33*** - Baseline + P Head (Fused) + Edge Head (Conditioned), SBD and BAS Signals
-34. **Ablation 34*** - Baseline + P Head (Fused) + Edge Head (Fused), SBD and BAS Signals
-35. **Ablation 35** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED and SBD Signals for Edge Head
-36. **Ablation 36** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED and SBD Signals for Edge Head
-37. **Ablation 37*** - Baseline + P Head (Fused) + Edge Head (Fused), HED and SBD Signals for Edge Head
-38. **Ablation 38** - Baseline + P Head (Conditioned) + Edge Head (Conditioned), HED and SBD Signals for Edge Head, BAS Signal for Semantic Head
-39. **Ablation 39** - Baseline + P Head (Fused) + Edge Head (Conditioned), HED and SBD Signals for Edge Head, BAS Signal for Semantic Head
-40. **Ablation 40*** - Baseline + P Head (Fused) + Edge Head (Fused), HED and SBD Signals for Edge Head, BAS Signal for Semantic Head (PIDNet + SBD Signal)
+#### <ins>Section 04 - Extend trainings, then finetune on Mapillary pre-trained weights</ins>
 
-#### <ins>Section 05 - Condition vs Fusion Grid Search, 2 Edge Heads (HED and SBD) and their respective signals</ins>
+We extended the trainings from 160K iterations to 240K iterations for the two best ablation studies (12 and 20) and found state-of-the-art performance on the Cityscapes dataset. Mapillary pre-training further improved results.
 
-41. **Ablation 41** - Baseline + Edge Head (HED) + Edge Head (SBD), HED and SBD signals for respective heads.
-42. **Ablation 42** - Baseline + P Head (Conditioned) + Edge Head (Conditioned, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads.
-43. **Ablation 43** - Baseline + P Head (Fused) + Edge Head (Conditioned, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads.
-44. **Ablation 44** - Baseline + P Head (Fused) + Edge Head (Fused, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads.
-45. **Ablation 45** - Baseline + P Head (Fused) + Edge Head (Conditioned, HED) + Edge Head (Fused, SBD), HED and SBD signals for respective heads.
-46. **Ablation 46** - Baseline + P Head (Conditioned) + Edge Head (Conditioned, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads, BAS signal for Semantic Head.
-47. **Ablation 47** - Baseline + P Head (Fused) + Edge Head (Conditioned, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads, BAS signal for Semantic Head.
-48. **Ablation 48** - Baseline + P Head (Fused) + Edge Head (Fused, HED) + Edge Head (Conditioned, SBD), HED and SBD signals for respective heads, BAS signal for Semantic Head.
-49. **Ablation 49** - Baseline + P Head (Fused) + Edge Head (Conditioned, HED) + Edge Head (Fused, SBD), HED and SBD signals for respective heads, BAS signal for Semantic Head.
+| Ablation | Mapillary Pre-training | mIoU | mF (ODS) | bFScore | FPS |
+|----------|:----------------------:|:----:|:--------:|:--------|:---:|
+| Ablation 12 | - | 80.7 | 67.7 (SBD) | 74.2 | **69.1** |
+| Ablation 20 | - | 81.1 | **82.4** (HED)<br>69.1 (SBD) | 75.0 | 60.5 |
+| Ablation 12 | ✓ | 81.0 | **69.5** (SBD) | **75.4** | **69.1** |
+| Ablation 20 | ✓ | **81.6** | 82.3 (HED)<br>68.8 (SBD) | 75.0 | 60.5 |
 
-#### <ins>Section 06 - Mapillary
-
-50. **Ablation 50** - Best Model + Mapillary Pre-training
-
-## Results
-
-Results are pending. The target date for all results is October 10th, 2025. Model weights for the best performing networks will be uploaded following experimentation.
 
 ## References
 
