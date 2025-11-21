@@ -18,7 +18,7 @@ You have a few options for software setup:
 
 Download weights from the table below and follow [evaluate.md](docs/evaluate.md).
 
-**Best Results so far, Without Mapillary Pre-training:**
+**Best Results on Cityscapes:**
 
    | Model (Cityscapes)              | Val mIoU (%)                                                                  | Test mIoU (%)                                                                    |  FPS  |
    |---------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-------|
