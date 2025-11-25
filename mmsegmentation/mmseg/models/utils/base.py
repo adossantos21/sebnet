@@ -29,7 +29,7 @@ class CustomBaseModule(BaseModule):
 
 
     def _make_stem_layer(self, in_channels: int, channels: int,
-                         num_blocks: int) -> nn.Sequential:
+                         depth: int) -> nn.Sequential:
         """Make stem layer.
 
         Args:
@@ -61,11 +61,7 @@ class CustomBaseModule(BaseModule):
         ]
 
         layers.append(
-            self._make_layer(BasicBlock, channels, channels, num_blocks))
-        layers.append(nn.ReLU())
-        layers.append(
-            self._make_layer(
-                BasicBlock, channels, channels * 2, num_blocks, stride=2))
+            self._make_layer(BasicBlock, channels, channels, depth))
         layers.append(nn.ReLU())
 
         return nn.Sequential(*layers)
@@ -74,7 +70,7 @@ class CustomBaseModule(BaseModule):
                     block: BasicBlock,
                     in_channels: int,
                     channels: int,
-                    num_blocks: int,
+                    depth: int,
                     stride: int = 1) -> nn.Sequential:
         """Make layer for PIDNet backbone.
         Args:
@@ -99,13 +95,13 @@ class CustomBaseModule(BaseModule):
 
         layers = [block(in_channels, channels, stride, downsample)]
         in_channels = channels * block.expansion
-        for i in range(1, num_blocks):
+        for i in range(1, depth):
             layers.append(
                 block(
                     in_channels,
                     channels,
                     stride=1,
-                    act_cfg_out=None if i == num_blocks - 1 else self.act_cfg))
+                    act_cfg_out=None if i == depth - 1 else self.act_cfg))
         return nn.Sequential(*layers)
 
     def _make_single_layer(self,

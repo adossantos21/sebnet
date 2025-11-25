@@ -11,7 +11,6 @@ from mmcv.cnn import ConvModule
 from .base_backbone import BaseBackbone
 from mmseg.registry import MODELS
 from mmengine.runner import CheckpointLoader
-#from mmseg.utils import OptConfigType
 from mmseg.models.utils import BasicBlock
 from mmseg.models.utils import BottleneckExp2 as Bottleneck
 from mmseg.models.utils.basic_block import OptConfigType

@@ -71,153 +71,297 @@ class BaseSegHead(BaseModule):
         if cls_seg is not None:
             x = cls_seg(x)
         return x
-    
-class PModuleScaled(CustomBaseModule):
-    '''
-    Model layers for the P branch of PIDNet. 
 
-    Args:
-        in_channels (int): The number of input channels. Default: 3.
-        channels (int): The number of channels in the stem layer. Default: 64.
-        ppm_channels (int): The number of channels in the PPM layer.
-            Default: 96.
-        num_stem_blocks (int): The number of blocks in the stem layer.
-            Default: 2.
-        num_branch_blocks (int): The number of blocks in the branch layer.
-            Default: 3.
-        align_corners (bool): The align_corners argument of F.interpolate.
-            Default: False.
-        norm_cfg (dict): Config dict for normalization layer.
-            Default: dict(type='BN').
-        act_cfg (dict): Config dict for activation layer.
-            Default: dict(type='ReLU', inplace=True).
-        init_cfg (dict): Config dict for initialization. Default: None.
-    '''
+class PModuleScaled(CustomBaseModule):
+    """
+    Model layers for the P branch of PIDNet.
+    """
     arch_settings = {
-        'base': {
-            'depths': [2, 2, 1],
-            'channels': [128, 128, 128]
-        },
         'small': {
-            'depths': [3, 3, 3],
-            'channels': [128, 128, 128]
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 256],  # Output channels per stage [stage3, stage4, stage5]
+            'depths': [2, 2, 1],
         },
-        'medium': {
-            'depths': [3, 3, 6],
-            'channels': [128, 128, 128]
+        'small_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 256, 512],
+            'depths': [2, 2, 1],
+        },
+        'base': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 256],
+            'depths': [3, 3, 1],
+        },
+        'base_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 256, 512],
+            'depths': [3, 3, 1],
         },
         'large': {
-            'depths': [3, 3, 9],
-            'channels': [128, 128, 128]
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 256],
+            'depths': [3, 3, 1],
+        },
+        'large_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 256, 512],
+            'depths': [3, 3, 1],
         },
         'xlarge': {
-            'depths': [3, 3, 9],
-            'channels': [192, 192, 192] # success
+            'backbone_channels': [96, 192, 384, 768, 1536],
+            'branch_channels': [192, 192, 384],
+            'depths': [3, 3, 1],
         },
-        'test': {
-            'depths': [3, 4, 4],
-            'channels': [192, 192, 192]
-        }
+        'xlarge_scaled': {
+            'backbone_channels': [96, 192, 384, 768, 1536],
+            'branch_channels': [192, 384, 768],
+            'depths': [3, 3, 1],
+        },
     }
 
     def __init__(self,
-                 arch='base',
-                 in_channels: int = 128,
+                 arch: Union[str, dict] = 'small',
                  align_corners: bool = False,
+                 norm_cfg: OptConfigType = dict(type='SyncBN', requires_grad=True),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
                  init_cfg: OptConfigType = None,
                  **kwargs):
         super().__init__(init_cfg)
+        
         if isinstance(arch, str):
             assert arch in self.arch_settings, \
-                f'Arch does not exist, please choose from ' \
-                f'({set(self.arch_settings)}) or pass a dict with ' \
-                f'"depths" and "channels" keys.'
+                f'Arch "{arch}" not found. Choose from {set(self.arch_settings.keys())} ' \
+                f'or pass a dict.'
             arch = self.arch_settings[arch]
         elif isinstance(arch, dict):
-            assert 'depths' in arch and 'channels' in arch, \
-            f'The arch dict must have "depths" and "channels", ' \
-            f'but got {list(arch.keys())}.'
+            required = ['backbone_channels', 'branch_channels', 'depths']
+            assert all(k in arch for k in required), \
+                f'Custom arch dict must have {required}.'
+            assert len(arch['branch_channels']) == 3, \
+                f'branch_channels must have 3 elements, got {len(arch["branch_channels"])}.'
         
+        self.backbone_channels = arch['backbone_channels']
+        self.branch_channels = arch['branch_channels']  # [stage3_out, stage4_out, stage5_out]
         self.depths = arch['depths']
-        self.channels = arch['channels']
-        assert (isinstance(self.depths, Sequence)
-                and isinstance(self.channels, Sequence)
-                and len(self.depths) == len(self.channels) == 3), \
-            f'The "depths" ({self.depths}) and "channels" ({self.channels}) ' \
-            f'should both be sequences of length 3.'
         
-        self.num_stages = len(self.depths)
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
         self.align_corners = align_corners
         self.relu = nn.ReLU()
 
-        # P Branch
+        # P Branch layers
         self.p_branch_layers = nn.ModuleList()
         for i in range(3):
+            block = BasicBlock if i < 2 else Bottleneck
+            
+            # Determine input channels
+            if i == 0:
+                in_ch = self.backbone_channels[1]  # x_1 channels
+            else:
+                in_ch = self.branch_channels[i - 1]  # Previous stage output
+            
+            # Determine layer channels (accounting for block expansion)
+            out_ch = self.branch_channels[i]
+            layer_ch = out_ch // block.expansion
+            
             self.p_branch_layers.append(
                 self._make_layer(
-                    block=BasicBlock if i < 2 else Bottleneck, # TODO: Delete this if statement pending ablation studies 3-5, since you only iterate twice for Pag2_Conditioned
-                    in_channels=in_channels,
-                    channels=self.channels[i],
+                    block=block,
+                    in_channels=in_ch,
+                    channels=layer_ch,
                     num_blocks=self.depths[i]))
+        
+        # Compression layers (backbone -> branch channels)
         self.compression_1 = ConvModule(
-            in_channels * 2,
-            in_channels,
+            self.backbone_channels[2],    # x_2 channels
+            self.branch_channels[0],      # Match stage 3 output
             kernel_size=1,
             bias=False,
             norm_cfg=self.norm_cfg,
             act_cfg=None)
         self.compression_2 = ConvModule(
-            in_channels * 4,
-            in_channels,
+            self.backbone_channels[3],    # x_3 channels
+            self.branch_channels[1],      # Match stage 4 output
             kernel_size=1,
             bias=False,
             norm_cfg=self.norm_cfg,
             act_cfg=None)
-        self.pag_1 = PagFM(in_channels, in_channels // 2)
-        self.pag_2 = PagFM(in_channels, in_channels // 2)
-
-    def forward(self, x: Tuple[Tensor, ...]) -> Union[Tensor, Tuple[Tensor]]:
-        """Forward function.
-        x should be a tuple of outputs:
-        x_0, x_1, x_2, x_3, x_4, x_out = x
-        x_0 has shape (N, 64, H/4, W/4)
-        x_1 has shape (N, 128, H/8, W/8)
-        x_2 has shape (N, 256, H/16, W/16)
-        x_3 has shape (N, 512, H/32, W/32)
-        x_4 has shape (N, 1024, H/64, W/64)
-        x_out has shape (N, 256, H/64, W/64)
         
-        NOTE: self.training is inherent to MMSeg configurations throughout BaseModule 
-        and BaseDecodeHead objects. Its boolean is inherited based on whether the
-        train loop or the test/val loops are executing.
-        
-        Args:
-            x (Tensor): Input tensor with shape (B, C, H, W).
+        # PAG modules
+        self.pag_1 = PagFM(self.branch_channels[0], self.branch_channels[0] // 2)
+        self.pag_2 = PagFM(self.branch_channels[1], self.branch_channels[1] // 2)
 
-        Returns:
-            Tensor or tuple[Tensor]: If self.training is True, return
-                tuple[Tensor], else return Tensor.
-        
-        """
-        _, x_1, x_2, x_3, _, _ = x # x_0, x_1, x_2, x_3, x_4, x_out = x
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function."""
+        _, x_1, x_2, x_3, _, _ = x
 
-        # stage 3
+        # stage 3: output shape (N, branch_channels[0], H/8, W/8)
         x_p = self.p_branch_layers[0](x_1)
-
         comp_i = self.compression_1(x_2)
-        x_p = self.pag_1(x_p, comp_i) # (N, 128, H/8, W/8)
+        x_p = self.pag_1(x_p, comp_i)
+        if self.training:
+            temp_p = x_p.clone()
 
-        # stage 4
+        # stage 4: output shape (N, branch_channels[1], H/8, W/8)
         x_p = self.p_branch_layers[1](self.relu(x_p))
-
         comp_i = self.compression_2(x_3)
-        x_p = self.pag_2(x_p, comp_i) # (N, 128, H/8, W/8)
+        x_p = self.pag_2(x_p, comp_i)
+
+        # stage 5: output shape (N, branch_channels[2], H/8, W/8)
+        x_p = self.p_branch_layers[2](self.relu(x_p))
         
-        # stage 5
-        x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
+        return tuple([temp_p, x_p]) if self.training else x_p
+
+
+class EdgeModuleScaled(CustomBaseModule):
+    """
+    Model layers for the D branch of PIDNet.
+    """
+    arch_settings = {
+        'small': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [64, 128, 256],  # [stage3_out, stage4_out, stage5_out]
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'bottleneck', 'bottleneck'],
+        },
+        'small_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [64, 128, 256],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'bottleneck', 'bottleneck'],
+        },
+        'small_constant': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 128],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'base': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 256],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'large': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 128, 256],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'xlarge': {
+            'backbone_channels': [96, 192, 384, 768, 1536],
+            'branch_channels': [192, 192, 384],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+    }
+
+    def __init__(self,
+                 arch: Union[str, dict] = 'small',
+                 align_corners: bool = False,
+                 norm_cfg: OptConfigType = dict(type='SyncBN', requires_grad=True),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
+                 **kwargs):
+        super().__init__(init_cfg)
         
-        return tuple([x_p])
-    
+        if isinstance(arch, str):
+            assert arch in self.arch_settings, \
+                f'Arch "{arch}" not found. Choose from {set(self.arch_settings.keys())} ' \
+                f'or pass a dict.'
+            arch = self.arch_settings[arch]
+        elif isinstance(arch, dict):
+            required = ['backbone_channels', 'branch_channels', 'depths', 'stage_blocks']
+            assert all(k in arch for k in required), \
+                f'Custom arch dict must have {required}.'
+            assert len(arch['branch_channels']) == 3, \
+                f'branch_channels must have 3 elements, got {len(arch["branch_channels"])}.'
+        
+        self.backbone_channels = arch['backbone_channels']
+        self.branch_channels = arch['branch_channels']
+        self.depths = arch['depths']
+        self.stage_blocks = arch['stage_blocks']
+        
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
+        self.align_corners = align_corners
+        self.eval_edges = eval_edges
+        self.relu = nn.ReLU()
+
+        # Helper to get block class
+        def get_block(name):
+            return BasicBlock if name == 'basic' else Bottleneck
+
+        # D Branch layers
+        self.d_branch_layers = nn.ModuleList()
+        for i in range(3):
+            block = get_block(self.stage_blocks[i])
+            
+            # Determine input channels
+            if i == 0:
+                in_ch = self.backbone_channels[1]  # x_1 channels
+            else:
+                in_ch = self.branch_channels[i - 1]
+            
+            # Determine layer channels (accounting for expansion)
+            out_ch = self.branch_channels[i]
+            layer_ch = out_ch // block.expansion
+            
+            # Use _make_single_layer only for BasicBlock with depth=1
+            # This matches EdgeModuleFused behavior
+            if self.depths[i] == 1 and self.stage_blocks[i] == 'basic':
+                self.d_branch_layers.append(
+                    self._make_single_layer(block, in_ch, layer_ch))
+            else:
+                self.d_branch_layers.append(
+                    self._make_layer(block, in_ch, layer_ch, self.depths[i]))
+
+        # Diff layers (backbone -> branch channels)
+        self.diff_1 = ConvModule(
+            self.backbone_channels[2],    # x_2 channels
+            self.branch_channels[0],      # Match stage 3 output
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+        self.diff_2 = ConvModule(
+            self.backbone_channels[3],    # x_3 channels
+            self.branch_channels[1],      # Match stage 4 output
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function."""
+        _, x_1, x_2, x_3, _, _ = x
+        h_out, w_out = x_1.shape[-2:]
+
+        # stage 3: output shape (N, branch_channels[0], H/8, W/8)
+        x_d = self.d_branch_layers[0](x_1)
+        diff_i = self.diff_1(x_2)
+        x_d = x_d + F.interpolate(
+            diff_i, size=[h_out, w_out], mode='bilinear', align_corners=self.align_corners)
+
+        # stage 4: output shape (N, branch_channels[1], H/8, W/8)
+        x_d = self.d_branch_layers[1](self.relu(x_d))
+        diff_i = self.diff_2(x_3)
+        x_d = x_d + F.interpolate(
+            diff_i, size=[h_out, w_out], mode='bilinear', align_corners=self.align_corners)
+        
+        if self.training or self.eval_edges:
+            temp_d = x_d.clone()
+
+        # stage 5: output shape (N, branch_channels[2], H/8, W/8)
+        x_d = self.d_branch_layers[2](self.relu(x_d))
+        
+        if self.training:
+            return tuple([temp_d, x_d])
+        return temp_d if self.eval_edges else x_d
+
 class PModuleFused(CustomBaseModule):
     '''
     Model layers for the P branch of PIDNet. 
@@ -313,6 +457,120 @@ class PModuleFused(CustomBaseModule):
         x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
         
         return tuple([temp_p, x_p]) if self.training else x_p
+
+class EdgeModuleFused(CustomBaseModule):
+    '''
+    Model layers for the D branch of PIDNet.
+    '''
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
+        self.align_corners = align_corners
+        self.eval_edges = eval_edges
+        self.relu = nn.ReLU()
+
+        # D Branch
+        if num_stem_blocks == 2:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2, channels),
+                self._make_layer(Bottleneck, channels, channels, 1)
+            ])
+            channel_expand = 1
+        else:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2,
+                                        channels * 2),
+                self._make_single_layer(BasicBlock, channels * 2, channels * 2)
+            ])
+            channel_expand = 2
+
+        self.diff_1 = ConvModule(
+            channels * 4,
+            channels * channel_expand,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+        self.diff_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+
+        self.d_branch_layers.append(
+            self._make_layer(Bottleneck, channels * 2, channels * 2, 1))
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        """
+        """
+        Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        """
+        _, x_1, x_2, x_3, _, _ = x
+
+        w_out = x[1].shape[-1]
+        h_out = x[1].shape[-2]
+
+
+        # stage 3
+        x_d = self.d_branch_layers[0](x_1)
+
+        diff_i = self.diff_1(x_2)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+
+        # stage 4
+        x_d = self.d_branch_layers[1](self.relu(x_d))
+
+        diff_i = self.diff_2(x_3)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        if self.training or self.eval_edges:
+            temp_d = x_d.clone()
+
+        # stage 5
+        x_d = self.d_branch_layers[2](self.relu(x_d))
+        if self.training:
+            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
+        else:
+            if self.eval_edges:
+                return temp_d
+            else:
+                return x_d
     
 class PModuleConditioned_Pag1(CustomBaseModule):
     '''

@@ -11,7 +11,6 @@ from mmcv.cnn import ConvModule
 from .base_backbone import BaseBackbone
 from mmseg.registry import MODELS
 from mmengine.runner import CheckpointLoader
-#from mmseg.utils import OptConfigType
 from mmseg.models.utils import BasicBlock
 from mmseg.models.utils import BottleneckExp2 as Bottleneck
 from mmseg.models.utils.basic_block import OptConfigType
@@ -44,6 +43,10 @@ class SEBNet(BaseBackbone):
         init_cfg (dict): Config dict for initialization. Default: None.
     """
     arch_settings = {
+        'small': {
+            'depths': [2, 2, 3, 3, 2],
+            'channels': [64, 128, 256, 512, 1024]
+        },
         'base': {
             'depths': [3, 3, 4, 4, 2],
             'channels': [64, 128, 256, 512, 1024]
