@@ -40,20 +40,40 @@ class DAPPMScaled(BaseModule):
             'branch_channels': 112,
             'out_channels': 256,
         },
+        'base_scaled': {
+            'backbone_channels': 1024,
+            'branch_channels': 224,
+            'out_channels': 512,
+        },
         'large': {
             'backbone_channels': 1024,
             'branch_channels': 112,
             'out_channels': 256,
+        },
+        'large_scaled': {
+            'backbone_channels': 1024,
+            'branch_channels': 224,
+            'out_channels': 512,
         },
         'xlarge': {
             'backbone_channels': 1536,
             'branch_channels': 168,
             'out_channels': 384,
         },
+        'xlarge_scaled': {
+            'backbone_channels': 1536,
+            'branch_channels': 336,
+            'out_channels': 768,
+        },
         'xxlarge': {
             'backbone_channels': 2048,
             'branch_channels': 224,
             'out_channels': 512,
+        },
+        'xxlarge_scaled': {
+            'backbone_channels': 2048,
+            'branch_channels': 448,
+            'out_channels': 1024,
         },
     }
     def __init__(self,

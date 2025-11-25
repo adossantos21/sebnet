@@ -74,6 +74,16 @@ class PIDNetSBDHead(BaseDecodeHead):
             'branch_channels': [192, 384, 768],
             'depths': [3, 9, 3],
         },
+        'xxlarge': {
+            'backbone_channels': [128, 256, 512, 1024, 2048],
+            'branch_channels': [256, 256, 512],
+            'depths': [3, 3, 1],
+        },
+        'xxlarge_scaled': {
+            'backbone_channels': [128, 256, 512, 1024, 2048],
+            'branch_channels': [256, 512, 1024],
+            'depths': [3, 12, 3],
+        },
     }
 
     def __init__(self, 
@@ -113,9 +123,9 @@ class PIDNetSBDHead(BaseDecodeHead):
             self.p_head = BaseSegHead(self.branch_channels[0], self.branch_channels[0], stride=stride, norm_cfg=norm_cfg, act_cfg=act_cfg)
             self.p_cls_seg = nn.Conv2d(self.branch_channels[0], num_classes, kernel_size=1)
         if self.training or self.eval_edges:
-            self.hed_head = BaseSegHead(self.branch_channels[0], self.branch_channels[0] // 2, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.hed_head = BaseSegHead(self.branch_channels[1], self.branch_channels[0] // 2, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.hed_cls_seg = nn.Conv2d(self.branch_channels[0] // 2, 1, kernel_size=1)
-            self.sbd_head = BaseSegHead(self.branch_channels[0], self.branch_channels[0] // 2, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
+            self.sbd_head = BaseSegHead(self.branch_channels[1], self.branch_channels[0] // 2, stride=stride, norm_cfg=norm_cfg) # No act_cfg here on purpose. See pidnet head.
             self.sbd_cls_seg = nn.Conv2d(self.branch_channels[0] // 2, num_classes, kernel_size=1)
         self.p_module = PModule(arch=self.arch)
         self.edge_module = EdgeModule(arch=self.arch, eval_edges=self.eval_edges)

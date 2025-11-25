@@ -266,6 +266,18 @@ class EdgeModuleScaled(CustomBaseModule):
             'depths': [3, 9, 3],
             'stage_blocks': ['basic', 'basic', 'bottleneck'],
         },
+        'xxlarge': {
+            'backbone_channels': [128, 256, 512, 1024, 2048],
+            'branch_channels': [256, 256, 512],
+            'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'xxlarge_scaled': {
+            'backbone_channels': [128, 256, 512, 1024, 2048],
+            'branch_channels': [256, 512, 1024],
+            'depths': [3, 12, 3],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
     }
 
     def __init__(self,
