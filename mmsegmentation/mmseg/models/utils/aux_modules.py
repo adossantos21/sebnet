@@ -85,7 +85,7 @@ class PModuleScaled(CustomBaseModule):
         'small_scaled': {
             'backbone_channels': [64, 128, 256, 512, 1024],
             'branch_channels': [128, 256, 512],
-            'depths': [2, 2, 1],
+            'depths': [2, 3, 2],
         },
         'base': {
             'backbone_channels': [64, 128, 256, 512, 1024],
@@ -95,7 +95,7 @@ class PModuleScaled(CustomBaseModule):
         'base_scaled': {
             'backbone_channels': [64, 128, 256, 512, 1024],
             'branch_channels': [128, 256, 512],
-            'depths': [3, 3, 1],
+            'depths': [3, 4, 2],
         },
         'large': {
             'backbone_channels': [64, 128, 256, 512, 1024],
@@ -105,7 +105,7 @@ class PModuleScaled(CustomBaseModule):
         'large_scaled': {
             'backbone_channels': [64, 128, 256, 512, 1024],
             'branch_channels': [128, 256, 512],
-            'depths': [3, 3, 1],
+            'depths': [3, 9, 3],
         },
         'xlarge': {
             'backbone_channels': [96, 192, 384, 768, 1536],
@@ -115,7 +115,7 @@ class PModuleScaled(CustomBaseModule):
         'xlarge_scaled': {
             'backbone_channels': [96, 192, 384, 768, 1536],
             'branch_channels': [192, 384, 768],
-            'depths': [3, 3, 1],
+            'depths': [3, 9, 3],
         },
     }
 
@@ -169,7 +169,7 @@ class PModuleScaled(CustomBaseModule):
                     block=block,
                     in_channels=in_ch,
                     channels=layer_ch,
-                    num_blocks=self.depths[i]))
+                    depth=self.depths[i]))
         
         # Compression layers (backbone -> branch channels)
         self.compression_1 = ConvModule(
@@ -220,26 +220,26 @@ class EdgeModuleScaled(CustomBaseModule):
     arch_settings = {
         'small': {
             'backbone_channels': [64, 128, 256, 512, 1024],
-            'branch_channels': [64, 128, 256],  # [stage3_out, stage4_out, stage5_out]
+            'branch_channels': [128, 128, 256],  # Output channels per stage [stage3, stage4, stage5]
             'depths': [1, 1, 1],
             'stage_blocks': ['basic', 'bottleneck', 'bottleneck'],
         },
         'small_scaled': {
             'backbone_channels': [64, 128, 256, 512, 1024],
             'branch_channels': [64, 128, 256],
-            'depths': [1, 1, 1],
+            'depths': [2, 3, 2],
             'stage_blocks': ['basic', 'bottleneck', 'bottleneck'],
-        },
-        'small_constant': {
-            'backbone_channels': [64, 128, 256, 512, 1024],
-            'branch_channels': [128, 128, 128],
-            'depths': [1, 1, 1],
-            'stage_blocks': ['basic', 'basic', 'bottleneck'],
         },
         'base': {
             'backbone_channels': [64, 128, 256, 512, 1024],
             'branch_channels': [128, 128, 256],
             'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'base_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 256, 512],
+            'depths': [3, 4, 2],
             'stage_blocks': ['basic', 'basic', 'bottleneck'],
         },
         'large': {
@@ -248,10 +248,22 @@ class EdgeModuleScaled(CustomBaseModule):
             'depths': [1, 1, 1],
             'stage_blocks': ['basic', 'basic', 'bottleneck'],
         },
+        'large_scaled': {
+            'backbone_channels': [64, 128, 256, 512, 1024],
+            'branch_channels': [128, 256, 512],
+            'depths': [3, 9, 3],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
         'xlarge': {
             'backbone_channels': [96, 192, 384, 768, 1536],
             'branch_channels': [192, 192, 384],
             'depths': [1, 1, 1],
+            'stage_blocks': ['basic', 'basic', 'bottleneck'],
+        },
+        'xlarge_scaled': {
+            'backbone_channels': [96, 192, 384, 768, 1536],
+            'branch_channels': [192, 384, 768],
+            'depths': [3, 9, 3],
             'stage_blocks': ['basic', 'basic', 'bottleneck'],
         },
     }
@@ -274,7 +286,7 @@ class EdgeModuleScaled(CustomBaseModule):
         elif isinstance(arch, dict):
             required = ['backbone_channels', 'branch_channels', 'depths', 'stage_blocks']
             assert all(k in arch for k in required), \
-                f'Custom arch dict must have {required}.'
+                f'Custom arch dict must have {required}. Instead, arch has {arch.keys()}'
             assert len(arch['branch_channels']) == 3, \
                 f'branch_channels must have 3 elements, got {len(arch["branch_channels"])}.'
         
@@ -361,6 +373,110 @@ class EdgeModuleScaled(CustomBaseModule):
         if self.training:
             return tuple([temp_d, x_d])
         return temp_d if self.eval_edges else x_d
+    
+class EdgeModuleConditionedScaled(CustomBaseModule):
+    '''
+    Model layers for the D branch of PIDNet.
+    '''
+    def __init__(self,
+                 channels: int = 64,
+                 num_stem_blocks: int = 2,
+                 align_corners: bool = False,
+                 norm_cfg: OptConfigType = dict(type='BN'),
+                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
+                 init_cfg: OptConfigType = None,
+                 eval_edges: bool = False,
+                 **kwargs):
+        super().__init__(init_cfg)
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
+        self.align_corners = align_corners
+        self.eval_edges = eval_edges
+        self.relu = nn.ReLU()
+
+        # D Branch
+        if num_stem_blocks == 2:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2, channels),
+                self._make_layer(Bottleneck, channels, channels, 1)
+            ])
+            channel_expand = 1
+        else:
+            self.d_branch_layers = nn.ModuleList([
+                self._make_single_layer(BasicBlock, channels * 2,
+                                        channels * 2),
+                self._make_single_layer(BasicBlock, channels * 2, channels * 2)
+            ])
+            channel_expand = 2
+
+        self.diff_1 = ConvModule(
+            channels * 4,
+            channels * channel_expand,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+        self.diff_2 = ConvModule(
+            channels * 8,
+            channels * 2,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            norm_cfg=norm_cfg,
+            act_cfg=None)
+
+
+    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
+        """Forward function.
+
+        Args:
+            x (Tensor): Input tensor with shape (B, C, H, W).
+
+        Returns:
+            Tensor or tuple[Tensor]: If self.training is True, return
+                tuple[Tensor], else return Tensor.
+        """
+        """
+        Forward function.
+        x should be a tuple of outputs:
+        x_0, x_1, x_2, x_3, x_4, x_out = x
+        x_0 has shape (N, 64, H/4, W/4)
+        x_1 has shape (N, 128, H/8, W/8)
+        x_2 has shape (N, 256, H/16, W/16)
+        x_3 has shape (N, 512, H/32, W/32)
+        x_4 has shape (N, 1024, H/64, W/64)
+        x_out has shape (N, 256, H/64, W/64)
+        """
+        _, x_1, x_2, x_3, _, _ = x
+
+        w_out = x[1].shape[-1]
+        h_out = x[1].shape[-2]
+
+
+        # stage 3
+        x_d = self.d_branch_layers[0](x_1)
+
+        diff_i = self.diff_1(x_2)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+
+        # stage 4
+        x_d = self.d_branch_layers[1](self.relu(x_d))
+
+        diff_i = self.diff_2(x_3)
+        x_d += F.interpolate(
+            diff_i,
+            size=[h_out, w_out],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        if self.training or self.eval_edges:
+            temp_d = x_d.clone()
+
+        return temp_d # temp_d: (N, 128, H/8, W/8)
 
 class PModuleFused(CustomBaseModule):
     '''
@@ -457,120 +573,6 @@ class PModuleFused(CustomBaseModule):
         x_p = self.p_branch_layers[2](self.relu(x_p)) # (N, 256, H/8, W/8)
         
         return tuple([temp_p, x_p]) if self.training else x_p
-
-class EdgeModuleFused(CustomBaseModule):
-    '''
-    Model layers for the D branch of PIDNet.
-    '''
-    def __init__(self,
-                 channels: int = 64,
-                 num_stem_blocks: int = 2,
-                 align_corners: bool = False,
-                 norm_cfg: OptConfigType = dict(type='BN'),
-                 act_cfg: OptConfigType = dict(type='ReLU', inplace=True),
-                 init_cfg: OptConfigType = None,
-                 eval_edges: bool = False,
-                 **kwargs):
-        super().__init__(init_cfg)
-        self.norm_cfg = norm_cfg
-        self.act_cfg = act_cfg
-        self.align_corners = align_corners
-        self.eval_edges = eval_edges
-        self.relu = nn.ReLU()
-
-        # D Branch
-        if num_stem_blocks == 2:
-            self.d_branch_layers = nn.ModuleList([
-                self._make_single_layer(BasicBlock, channels * 2, channels),
-                self._make_layer(Bottleneck, channels, channels, 1)
-            ])
-            channel_expand = 1
-        else:
-            self.d_branch_layers = nn.ModuleList([
-                self._make_single_layer(BasicBlock, channels * 2,
-                                        channels * 2),
-                self._make_single_layer(BasicBlock, channels * 2, channels * 2)
-            ])
-            channel_expand = 2
-
-        self.diff_1 = ConvModule(
-            channels * 4,
-            channels * channel_expand,
-            kernel_size=3,
-            padding=1,
-            bias=False,
-            norm_cfg=norm_cfg,
-            act_cfg=None)
-        self.diff_2 = ConvModule(
-            channels * 8,
-            channels * 2,
-            kernel_size=3,
-            padding=1,
-            bias=False,
-            norm_cfg=norm_cfg,
-            act_cfg=None)
-
-        self.d_branch_layers.append(
-            self._make_layer(Bottleneck, channels * 2, channels * 2, 1))
-
-    def forward(self, x: Tensor) -> Union[Tensor, Tuple[Tensor]]:
-        """Forward function.
-
-        Args:
-            x (Tensor): Input tensor with shape (B, C, H, W).
-
-        Returns:
-            Tensor or tuple[Tensor]: If self.training is True, return
-                tuple[Tensor], else return Tensor.
-        """
-        """
-        Forward function.
-        x should be a tuple of outputs:
-        x_0, x_1, x_2, x_3, x_4, x_out = x
-        x_0 has shape (N, 64, H/4, W/4)
-        x_1 has shape (N, 128, H/8, W/8)
-        x_2 has shape (N, 256, H/16, W/16)
-        x_3 has shape (N, 512, H/32, W/32)
-        x_4 has shape (N, 1024, H/64, W/64)
-        x_out has shape (N, 256, H/64, W/64)
-        """
-        _, x_1, x_2, x_3, _, _ = x
-
-        w_out = x[1].shape[-1]
-        h_out = x[1].shape[-2]
-
-
-        # stage 3
-        x_d = self.d_branch_layers[0](x_1)
-
-        diff_i = self.diff_1(x_2)
-        x_d += F.interpolate(
-            diff_i,
-            size=[h_out, w_out],
-            mode='bilinear',
-            align_corners=self.align_corners)
-
-        # stage 4
-        x_d = self.d_branch_layers[1](self.relu(x_d))
-
-        diff_i = self.diff_2(x_3)
-        x_d += F.interpolate(
-            diff_i,
-            size=[h_out, w_out],
-            mode='bilinear',
-            align_corners=self.align_corners)
-        if self.training or self.eval_edges:
-            temp_d = x_d.clone()
-
-        # stage 5
-        x_d = self.d_branch_layers[2](self.relu(x_d))
-        if self.training:
-            return tuple([temp_d, x_d]) # temp_d: (N, 128, H/8, W/8), x_d: (N, 256, H/8, W/8)
-        else:
-            if self.eval_edges:
-                return temp_d
-            else:
-                return x_d
     
 class PModuleConditioned_Pag1(CustomBaseModule):
     '''

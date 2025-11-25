@@ -39,6 +39,7 @@ from .aux_modules import (
     DFF,
     BEM,
     MIMIR,
+    EdgeModuleScaled,
     EdgeModuleFused_EarlierLayers,
     EdgeModuleConditioned_EarlierLayers,
     CASENet_EarlierLayers,
@@ -60,5 +61,5 @@ __all__ = [
     "BEM_EarlierLayers", "MIMIR_EarlierLayers", "EdgeModuleFused_EarlierLayers", 
     "EdgeModuleConditioned_EarlierLayers", "PModuleConditioned_Pag1", 
     "PModuleConditioned_Pag2", "PModuleConditioned_LastLayer", "BaseConv",
-    "PModuleScaled", "BottleneckPIDNet"
+    "PModuleScaled", "BottleneckPIDNet", "EdgeModuleScaled"
 ]

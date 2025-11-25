@@ -63,7 +63,8 @@ from .ablation25 import Ablation25
 from .ablation26 import Ablation26
 from .ablation27 import Ablation27
 from .ablation28 import Ablation28
-from .ablation99 import Ablation99
+from .ablation99 import Ablation99 
+from .pidnet_sbd_head import PIDNetSBDHead
 
 
 __all__ = [
@@ -80,5 +81,5 @@ __all__ = [
     'Ablation11', 'Ablation12', 'Ablation13', 'Ablation14', 'Ablation15',
     'Ablation16', 'Ablation17', 'Ablation18', 'Ablation19', 'Ablation20',
     'Ablation22', 'Ablation23', 'Ablation24', 'Ablation25', 'Ablation26',
-    'Ablation27', 'Ablation28', 'Ablation99', 'Ablation21'
+    'Ablation27', 'Ablation28', 'Ablation99', 'Ablation21', 'PIDNetSBDHead'
 ]

@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import Dict, List, Tuple
+from typing import Dict, List, Union
 
 import torch
 import torch.nn as nn
@@ -8,6 +8,190 @@ from mmcv.cnn import ConvModule
 from mmengine.model import BaseModule, ModuleList, Sequential
 from mmseg.registry import MODELS
 from torch import Tensor
+
+@MODELS.register_module()
+class DAPPMScaled(BaseModule):
+    """DAPPM module in `DDRNet <https://arxiv.org/abs/2101.06085>`_.
+
+    Args:
+        in_channels (int): Input channels.
+        branch_channels (int): Branch channels.
+        out_channels (int): Output channels.
+        num_scales (int): Number of scales.
+        kernel_sizes (list[int]): Kernel sizes of each scale.
+        strides (list[int]): Strides of each scale.
+        paddings (list[int]): Paddings of each scale.
+        norm_cfg (dict): Config dict for normalization layer.
+            Default: dict(type='BN').
+        act_cfg (dict): Config dict for activation layer in ConvModule.
+            Default: dict(type='ReLU', inplace=True).
+        conv_cfg (dict): Config dict for convolution layer in ConvModule.
+            Default: dict(order=('norm', 'act', 'conv'), bias=False).
+        upsample_mode (str): Upsample mode. Default: 'bilinear'.
+    """
+    arch_settings = {
+        'small': {
+            'backbone_channels': 1024,
+            'branch_channels': 112,
+            'out_channels': 256,
+        },
+        'base': {
+            'backbone_channels': 1024,
+            'branch_channels': 112,
+            'out_channels': 256,
+        },
+        'large': {
+            'backbone_channels': 1024,
+            'branch_channels': 112,
+            'out_channels': 256,
+        },
+        'xlarge': {
+            'backbone_channels': 1536,
+            'branch_channels': 168,
+            'out_channels': 384,
+        },
+        'xxlarge': {
+            'backbone_channels': 2048,
+            'branch_channels': 224,
+            'out_channels': 512,
+        },
+    }
+    def __init__(self,
+                 num_scales: int,
+                 arch: Union[str, dict] = 'base',
+                 kernel_sizes: List[int] = [5, 9, 17],
+                 strides: List[int] = [2, 4, 8],
+                 paddings: List[int] = [2, 4, 8],
+                 norm_cfg: Dict = dict(type='BN', momentum=0.1),
+                 act_cfg: Dict = dict(type='ReLU', inplace=True),
+                 conv_cfg: Dict = dict(
+                     order=('norm', 'act', 'conv'), bias=False),
+                 upsample_mode: str = 'bilinear'):
+        super().__init__()
+        if isinstance(arch, str):
+            assert arch in self.arch_settings, \
+                f'Arch "{arch}" not found. Choose from {set(self.arch_settings.keys())} ' \
+                f'or pass a dict.'
+            arch = self.arch_settings[arch]
+        elif isinstance(arch, dict):
+            required = ['backbone_channels', 'branch_channels', 'out_channels']
+            assert all(k in arch for k in required), \
+                f'Custom arch dict must have {required}.'
+
+        self.num_scales = num_scales
+        self.unsample_mode = upsample_mode
+        self.in_channels = arch['backbone_channels']
+        self.branch_channels = arch['branch_channels']
+        self.out_channels = arch['out_channels']
+        self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
+        self.conv_cfg = conv_cfg
+
+        self.scales = ModuleList([
+            ConvModule(
+                self.in_channels,
+                self.branch_channels,
+                kernel_size=1,
+                norm_cfg=norm_cfg,
+                act_cfg=act_cfg,
+                **conv_cfg)
+        ])
+        for i in range(1, num_scales - 1):
+            self.scales.append(
+                Sequential(*[
+                    nn.AvgPool2d(
+                        kernel_size=kernel_sizes[i - 1],
+                        stride=strides[i - 1],
+                        padding=paddings[i - 1]),
+                    ConvModule(
+                        self.in_channels,
+                        self.branch_channels,
+                        kernel_size=1,
+                        norm_cfg=norm_cfg,
+                        act_cfg=act_cfg,
+                        **conv_cfg)
+                ]))
+        self.scales.append(
+            Sequential(*[
+                nn.AdaptiveAvgPool2d((1, 1)),
+                ConvModule(
+                    self.in_channels,
+                    self.branch_channels,
+                    kernel_size=1,
+                    norm_cfg=norm_cfg,
+                    act_cfg=act_cfg,
+                    **conv_cfg)
+            ]))
+        self.processes = ModuleList()
+        for i in range(num_scales - 1):
+            self.processes.append(
+                ConvModule(
+                    self.branch_channels,
+                    self.branch_channels,
+                    kernel_size=3,
+                    padding=1,
+                    norm_cfg=norm_cfg,
+                    act_cfg=act_cfg,
+                    **conv_cfg))
+
+        self.compression = ConvModule(
+            self.branch_channels * num_scales,
+            self.out_channels,
+            kernel_size=1,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            **conv_cfg)
+
+        self.shortcut = ConvModule(
+            self.in_channels,
+            self.out_channels,
+            kernel_size=1,
+            norm_cfg=norm_cfg,
+            act_cfg=act_cfg,
+            **conv_cfg)
+
+    def forward(self, x: List):
+        '''Forward function.
+
+        Args:
+            x (List): List of torch.Tensor's. The last element in the
+            list should be the backbone output. Any element before the
+            last should be a previous backbone stage's features. All
+            input tensors shold have shape (N, C, H, W).
+
+        Returns:
+            tuple[Tensor]: The last element should be the backbone's
+            output processed by this neck module.
+        '''
+    
+        if isinstance(x, torch.Tensor):
+            x = [x]
+        elif isinstance(x, list):
+            if not all(isinstance(item, torch.Tensor) for item in x):
+                raise TypeError("All elements in the list must be of type torch.Tensor")
+        else:
+            raise TypeError(f"x should be of type List or torch.Tensor; instead, it is {type(x)}.")
+        inputs = x[-1]
+        feats = []
+        #print(f"type(inputs): {type(inputs)}")
+        #print(f"len(inputs): {len(inputs)}")
+        #print(f"type(inputs[-1]): {type(inputs[-1])}")
+        #import sys
+        #sys.exit()
+        feats.append(self.scales[0](inputs))
+
+        for i in range(1, self.num_scales):
+            feat_up = F.interpolate(
+                self.scales[i](inputs),
+                size=inputs.shape[2:],
+                mode=self.unsample_mode)
+            feats.append(self.processes[i - 1](feat_up + feats[i - 1]))
+
+        out = self.compression(torch.cat(feats,
+                                         dim=1)) + self.shortcut(inputs)
+        x.append(out)
+        
+        return x
 
 @MODELS.register_module()
 class DAPPM(BaseModule):
